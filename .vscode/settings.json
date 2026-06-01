@@ -1,0 +1,28 @@
+{
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/vendor": true,
+        "**/public/build": true,
+        "**/storage/framework/cache": true,
+        "**/storage/framework/sessions": true,
+        "**/storage/framework/views": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/vendor": true,
+        "**/public/build": true,
+        "**/storage": true
+    },
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/vendor/**": true,
+        "**/public/build/**": true,
+        "**/storage/**": true
+    },
+    "typescript.tsserver.excludeDirectories": [
+        "node_modules",
+        "vendor",
+        "public/build",
+        "storage"
+    ]
+}

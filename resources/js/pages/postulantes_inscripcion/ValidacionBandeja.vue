@@ -1,0 +1,97 @@
+<script setup>
+import { ref, onMounted } from 'vue';
+import { fetchInscripcionesPendientes } from '../../api/validacion-documental';
+
+const emit = defineEmits(['navigate']);
+
+const loading = ref(true);
+const inscripciones = ref([]);
+const serverMessage = ref('');
+
+onMounted(async () => {
+    try {
+        const payload = await fetchInscripcionesPendientes();
+        inscripciones.value = payload.data.inscripciones;
+    } catch (error) {
+        serverMessage.value = 'Error al cargar la lista de inscripciones pendientes.';
+    } finally {
+        loading.value = false;
+    }
+});
+
+function verDetalle(id) {
+    emit('navigate', `/admin/validacion-documental/${id}`);
+}
+</script>
+
+<template>
+    <div>
+        <header class="mb-6 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Validación Documental</h1>
+                <p class="mt-1 text-sm text-slate-500">Gestión y revisión de requisitos documentales de los postulantes.</p>
+            </div>
+        </header>
+
+        <div v-if="loading" class="flex items-center justify-center py-12">
+            <svg class="h-6 w-6 animate-spin text-cyan-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span class="ml-3 text-sm text-slate-500">Cargando bandeja de pendientes...</span>
+        </div>
+
+        <div v-else-if="serverMessage" class="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {{ serverMessage }}
+        </div>
+
+        <div v-else-if="inscripciones.length === 0" class="rounded-lg border border-slate-200 bg-white py-16 text-center">
+            <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-4 text-sm font-medium text-slate-900">Bandeja vacía</h3>
+            <p class="mt-1 text-sm text-slate-500">No hay inscripciones pendientes de validación documental en este momento.</p>
+        </div>
+
+        <div v-else class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 font-semibold text-slate-900">Código CUP</th>
+                        <th class="px-6 py-3 font-semibold text-slate-900">Postulante</th>
+                        <th class="px-6 py-3 font-semibold text-slate-900">CI</th>
+                        <th class="px-6 py-3 font-semibold text-slate-900">Gestión</th>
+                        <th class="px-6 py-3 font-semibold text-slate-900">Estado Actual</th>
+                        <th class="px-6 py-3 text-right font-semibold text-slate-900">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 bg-white">
+                    <tr v-for="ins in inscripciones" :key="ins.id" class="transition hover:bg-slate-50">
+                        <td class="whitespace-nowrap px-6 py-4 font-medium text-cyan-700">{{ ins.codigo }}</td>
+                        <td class="whitespace-nowrap px-6 py-4 text-slate-700">
+                            {{ ins.postulante.apellido_paterno }} {{ ins.postulante.apellido_materno }} {{ ins.postulante.nombres }}
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ ins.postulante.ci }}</td>
+                        <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ ins.gestion.nombre }}</td>
+                        <td class="whitespace-nowrap px-6 py-4">
+                            <span v-if="ins.estado === 'prepostulado'" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
+                                Pre-postulado
+                            </span>
+                            <span v-else-if="ins.estado === 'documentos_pendientes'" class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                                Docs. Observados
+                            </span>
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-4 text-right">
+                            <button
+                                @click="verDetalle(ins.id)"
+                                class="inline-flex items-center text-sm font-semibold text-cyan-600 transition hover:text-cyan-800"
+                            >
+                                Validar
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</template>
