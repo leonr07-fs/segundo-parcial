@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Gestion;
+use App\Models\GestionAcademica\Gestion;
 use App\Support\States\GestionState;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -47,6 +47,16 @@ class GestionFactory extends Factory
     {
         return $this->state(fn () => [
             'estado' => GestionState::PLANIFICADA,
+        ]);
+    }
+
+    /**
+     * Gestion con inscripciones cerradas, pero operativa para asignacion y evaluaciones.
+     */
+    public function inhabilitada(): static
+    {
+        return $this->state(fn () => [
+            'estado' => GestionState::INHABILITADA,
         ]);
     }
 }

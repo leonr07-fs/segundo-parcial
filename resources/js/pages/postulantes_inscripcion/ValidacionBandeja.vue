@@ -1,4 +1,6 @@
 <script setup>
+// [CU03] Validar requisitos documentales - Bandeja de expedientes pendientes para cajero
+
 import { ref, onMounted } from 'vue';
 import { fetchInscripcionesPendientes } from '../../api/validacion-documental';
 
@@ -22,14 +24,35 @@ onMounted(async () => {
 function verDetalle(id) {
     emit('navigate', `/admin/validacion-documental/${id}`);
 }
+
+function resumenPrevalidacion(inscripcion) {
+    const documentos = inscripcion.documentos ?? [];
+
+    if (!documentos.length) {
+        return { texto: 'Sin documentos', clase: 'bg-slate-100 text-slate-700' };
+    }
+
+    const criticos = documentos.filter(doc => doc.prevalidacion_estado === 'critico').length;
+    const observados = documentos.filter(doc => doc.prevalidacion_estado === 'observado').length;
+
+    if (criticos > 0) {
+        return { texto: `${criticos} critico(s)`, clase: 'bg-red-100 text-red-700' };
+    }
+
+    if (observados > 0) {
+        return { texto: `${observados} observado(s)`, clase: 'bg-amber-100 text-amber-800' };
+    }
+
+    return { texto: 'Prevalidado OK', clase: 'bg-emerald-100 text-emerald-700' };
+}
 </script>
 
 <template>
     <div>
         <header class="mb-6 flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-slate-900">Validación Documental</h1>
-                <p class="mt-1 text-sm text-slate-500">Gestión y revisión de requisitos documentales de los postulantes.</p>
+                <h1 class="text-2xl font-bold text-slate-900">Validacion Documental</h1>
+                <p class="mt-1 text-sm text-slate-500">Gestion y revision de requisitos documentales de los postulantes.</p>
             </div>
         </header>
 
@@ -49,20 +72,21 @@ function verDetalle(id) {
             <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h3 class="mt-4 text-sm font-medium text-slate-900">Bandeja vacía</h3>
-            <p class="mt-1 text-sm text-slate-500">No hay inscripciones pendientes de validación documental en este momento.</p>
+            <h3 class="mt-4 text-sm font-medium text-slate-900">Bandeja vacia</h3>
+            <p class="mt-1 text-sm text-slate-500">No hay inscripciones pendientes de validacion documental en este momento.</p>
         </div>
 
         <div v-else class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-6 py-3 font-semibold text-slate-900">Código CUP</th>
+                        <th class="px-6 py-3 font-semibold text-slate-900">Codigo CUP</th>
                         <th class="px-6 py-3 font-semibold text-slate-900">Postulante</th>
                         <th class="px-6 py-3 font-semibold text-slate-900">CI</th>
-                        <th class="px-6 py-3 font-semibold text-slate-900">Gestión</th>
+                        <th class="px-6 py-3 font-semibold text-slate-900">Gestion</th>
+                        <th class="px-6 py-3 font-semibold text-slate-900">Prevalidacion</th>
                         <th class="px-6 py-3 font-semibold text-slate-900">Estado Actual</th>
-                        <th class="px-6 py-3 text-right font-semibold text-slate-900">Acción</th>
+                        <th class="px-6 py-3 text-right font-semibold text-slate-900">Accion</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 bg-white">
@@ -73,6 +97,11 @@ function verDetalle(id) {
                         </td>
                         <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ ins.postulante.ci }}</td>
                         <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ ins.gestion.nombre }}</td>
+                        <td class="whitespace-nowrap px-6 py-4">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="resumenPrevalidacion(ins).clase">
+                                {{ resumenPrevalidacion(ins).texto }}
+                            </span>
+                        </td>
                         <td class="whitespace-nowrap px-6 py-4">
                             <span v-if="ins.estado === 'prepostulado'" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
                                 Pre-postulado

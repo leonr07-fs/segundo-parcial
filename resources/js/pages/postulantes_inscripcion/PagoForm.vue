@@ -1,4 +1,6 @@
 <script setup>
+// [CU04] Registrar/verificar pago - Formulario de cobro y registro de referencia de pago
+
 import { ref } from 'vue';
 import { registrarPago } from '../../api/pagos';
 
@@ -17,6 +19,7 @@ const fieldErrors = ref({});
 const success = ref(false);
 
 const reciboDetails = ref(null);
+const credenciales = ref(null);
 
 const form = ref({
     monto: '300.00', // Arancel por defecto
@@ -32,6 +35,7 @@ async function handleSubmit() {
     try {
         const payload = await registrarPago(props.inscripcionId, form.value);
         reciboDetails.value = payload.data.recibo;
+        credenciales.value = payload.data.credenciales;
         success.value = true;
     } catch (error) {
         if (error.response?.status === 422) {
@@ -76,6 +80,24 @@ async function handleSubmit() {
                         <dd class="font-medium text-slate-900">{{ form.referencia }}</dd>
                     </div>
                 </dl>
+            </div>
+
+            <!-- Mostrar Credenciales del Estudiante -->
+            <div v-if="credenciales" class="mt-6 rounded-lg border border-emerald-200 bg-emerald-50/50 p-5 text-left shadow-sm">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-emerald-700">Credenciales del Estudiante Generadas</h3>
+                <dl class="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-xs text-slate-500">Número de Registro</dt>
+                        <dd class="mt-1 rounded border border-slate-200 bg-white px-3 py-2 font-mono text-lg font-bold text-slate-900">{{ credenciales.numero_registro }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-slate-500">Contraseña Temporal</dt>
+                        <dd class="mt-1 rounded border border-slate-200 bg-white px-3 py-2 font-mono text-lg font-bold text-slate-900">{{ credenciales.password_temporal }}</dd>
+                    </div>
+                </dl>
+                <p class="mt-4 text-xs" :class="credenciales.correo_enviado ? 'text-emerald-700' : 'text-amber-700'">
+                    {{ credenciales.correo_enviado ? '✓ Las credenciales han sido enviadas al correo del postulante.' : '⚠ No se pudo enviar el correo automáticamente. Por favor comunique estas credenciales manualmente.' }}
+                </p>
             </div>
 
             <button @click="$emit('back')" class="mt-6 w-full rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">

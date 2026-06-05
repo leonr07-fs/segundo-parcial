@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
+/**
+ * CU01: Autenticación de Usuario
+ * Controlador para manejar el ingreso y cierre de sesión de todos los usuarios del sistema.
+ */
 class AuthenticatedSessionController extends Controller
 {
     public function __construct(private readonly LoginService $loginService)

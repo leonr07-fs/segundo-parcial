@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\Evaluacion;
-use App\Models\GrupoMateria;
-use App\Models\Inscripcion;
-use App\Models\User;
+use App\Models\EvaluacionesResultados\Evaluacion;
+use App\Models\GestionAcademica\GrupoMateria;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\Seguridad\User;
 use App\Support\States\EvaluacionState;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

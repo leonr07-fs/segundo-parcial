@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Pago;
-use App\Models\Recibo;
-use App\Models\User;
+use App\Models\InscripcionPagos\Pago;
+use App\Models\InscripcionPagos\Recibo;
+use App\Models\Seguridad\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ReciboFactory extends Factory

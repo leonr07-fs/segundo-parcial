@@ -123,6 +123,8 @@
 </template>
 
 <script setup>
+// [CU10] Validar reglas académicas - Visualización de observaciones y notas fuera de rango
+
 import { ref, onMounted } from 'vue';
 import { getValidacionesPendientes } from '../../api/validacion-academica';
 

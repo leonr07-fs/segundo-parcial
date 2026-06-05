@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Evaluacion;
-use App\Models\Inscripcion;
-use App\Services\ValidacionAcademicaService;
+use App\Models\EvaluacionesResultados\Evaluacion;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Services\GestionAcademica\ValidacionAcademicaService;
 use App\Support\States\EvaluacionState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

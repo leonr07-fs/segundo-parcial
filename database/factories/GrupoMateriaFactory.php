@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\GrupoMateria;
+use App\Models\GestionAcademica\GrupoMateria;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class GrupoMateriaFactory extends Factory

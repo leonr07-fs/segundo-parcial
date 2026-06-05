@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Inscripcion;
-use App\Models\Pago;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\InscripcionPagos\Pago;
 use App\Support\States\PagoState;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

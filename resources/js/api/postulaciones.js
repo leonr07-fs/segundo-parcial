@@ -16,3 +16,15 @@ export async function storePostulacion(data) {
 
     return response.data;
 }
+
+export async function fetchSolicitudDocenteFormData() {
+    const response = await window.axios.get('/api/solicitudes-docentes/create');
+
+    return response.data;
+}
+
+export async function storeSolicitudDocente(data) {
+    const response = await window.axios.post('/api/solicitudes-docentes', data);
+
+    return response.data;
+}

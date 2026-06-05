@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Documento;
-use App\Models\Inscripcion;
-use App\Models\User;
+use App\Models\InscripcionPagos\Documento;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\Seguridad\User;
 use App\Support\States\DocumentoState;
 use App\Support\TipoDocumento;
 use Illuminate\Database\Eloquent\Factories\Factory;

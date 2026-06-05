@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Documento;
-use App\Models\Inscripcion;
-use App\Models\User;
+use App\Models\InscripcionPagos\Documento;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\Seguridad\User;
 use App\Support\States\DocumentoState;
 use App\Support\States\InscripcionState;
 use App\Support\States\ValidacionDocumentalState;
@@ -110,7 +110,15 @@ class Cu03ValidacionDocumentalTest extends TestCase
             ->postJson("/api/inscripciones/{$inscripcion->id}/documentos/validar", $payload);
 
         $response->assertOk()
-            ->assertJsonPath('ok', true);
+            ->assertJsonPath('ok', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'validacion',
+                    'credenciales',
+                ],
+            ]);
+
+        $this->assertNull($response->json('data.credenciales'));
 
         // Validación global
         $this->assertDatabaseHas('validaciones_documentales', [
@@ -134,6 +142,14 @@ class Cu03ValidacionDocumentalTest extends TestCase
         // Auditoría
         $this->assertDatabaseHas('audit_logs', [
             'event' => 'validacion.documental.completada',
+        ]);
+
+        $postulante = $inscripcion->postulante;
+        $this->assertDatabaseMissing('users', [
+            'email' => $postulante->correo,
+        ]);
+        $this->assertDatabaseMissing('audit_logs', [
+            'event' => 'postulante.credenciales.emitidas',
         ]);
     }
 

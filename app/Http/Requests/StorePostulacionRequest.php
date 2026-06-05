@@ -44,6 +44,10 @@ class StorePostulacionRequest extends FormRequest
                 'exists:carreras,id',
                 'different:carrera_primera_opcion_id',
             ],
+
+            /* Documentos (Archivos) */
+            'foto_ci' => ['required', 'file', 'mimes:jpeg,png,jpg,pdf', 'max:2048'],
+            'foto_libreta' => ['required', 'file', 'mimes:jpeg,png,jpg,pdf', 'max:2048'],
         ];
     }
 
@@ -89,6 +93,17 @@ class StorePostulacionRequest extends FormRequest
             'carrera_segunda_opcion_id.required' => 'Debe seleccionar la segunda opción de carrera.',
             'carrera_segunda_opcion_id.exists' => 'La segunda opción de carrera no existe.',
             'carrera_segunda_opcion_id.different' => 'La segunda opción de carrera debe ser diferente a la primera.',
+
+            /* Documentos */
+            'foto_ci.required' => 'La foto o documento del Carnet de Identidad es obligatoria.',
+            'foto_ci.file' => 'El Carnet de Identidad debe ser un archivo válido.',
+            'foto_ci.mimes' => 'El Carnet de Identidad debe ser de tipo jpeg, png, jpg o pdf.',
+            'foto_ci.max' => 'El Carnet de Identidad no debe pesar más de 2MB.',
+            
+            'foto_libreta.required' => 'La foto o documento de la libreta es obligatoria.',
+            'foto_libreta.file' => 'La libreta debe ser un archivo válido.',
+            'foto_libreta.mimes' => 'La libreta debe ser de tipo jpeg, png, jpg o pdf.',
+            'foto_libreta.max' => 'La libreta no debe pesar más de 2MB.',
         ];
     }
 }

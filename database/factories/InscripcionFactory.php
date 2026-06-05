@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Gestion;
-use App\Models\Inscripcion;
-use App\Models\Postulante;
+use App\Models\GestionAcademica\Gestion;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\InscripcionPagos\Postulante;
 use App\Support\States\InscripcionState;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

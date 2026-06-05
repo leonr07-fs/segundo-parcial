@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Carrera;
+use App\Models\AsignacionCarrera\Carrera;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

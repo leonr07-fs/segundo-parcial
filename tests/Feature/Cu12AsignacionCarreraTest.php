@@ -2,16 +2,17 @@
 
 namespace Tests\Feature;
 
-use App\Models\Carrera;
-use App\Models\CupoCarrera;
-use App\Models\Gestion;
-use App\Models\Inscripcion;
-use App\Models\OpcionCarrera;
-use App\Models\Postulante;
-use App\Models\ResultadoCup;
+use App\Models\AsignacionCarrera\Carrera;
+use App\Models\AsignacionCarrera\CupoCarrera;
+use App\Models\GestionAcademica\Gestion;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\AsignacionCarrera\OpcionCarrera;
+use App\Models\InscripcionPagos\Postulante;
+use App\Models\EvaluacionesResultados\ResultadoCup;
 use App\Support\States\AsignacionCarreraState;
 use App\Support\States\InscripcionState;
-use App\Services\AsignacionCarreraService;
+use App\Services\GestionAcademica\AsignacionCarreraService;
+use App\Models\Seguridad\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -93,6 +94,75 @@ class Cu12AsignacionCarreraTest extends TestCase
         $this->assertDatabaseHas('cupos_carrera', [
             'carrera_id' => $carreraSistemas->id,
             'cupo_disponible' => 9
+        ]);
+    }
+
+    public function test_admin_configura_cupos_por_carrera_para_la_gestion_activa(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $gestion = Gestion::factory()->create(['estado' => 'activa']);
+        $sistemas = Carrera::factory()->create(['codigo' => 'SIS', 'nombre' => 'Ingenieria en Sistemas']);
+        $informatica = Carrera::factory()->create(['codigo' => 'INF', 'nombre' => 'Informatica']);
+
+        $response = $this->actingAs($admin)->putJson('/api/asignaciones-carrera/cupos', [
+            'cupos' => [
+                ['carrera_id' => $sistemas->id, 'cupo_total' => 300],
+                ['carrera_id' => $informatica->id, 'cupo_total' => 500],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.cupos.0.cupo_total', 300)
+            ->assertJsonPath('data.cupos.0.cupo_disponible', 300)
+            ->assertJsonPath('data.cupos.1.cupo_total', 500);
+
+        $this->assertDatabaseHas('cupos_carrera', [
+            'gestion_id' => $gestion->id,
+            'carrera_id' => $sistemas->id,
+            'cupo_total' => 300,
+            'cupo_disponible' => 300,
+        ]);
+    }
+
+    public function test_admin_configura_cupos_para_la_gestion_solicitada_sin_mezclar_otras_gestiones(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $gestionActual = Gestion::factory()->create(['estado' => 'activa']);
+        $gestionAnterior = Gestion::factory()->create(['estado' => 'inhabilitada']);
+        $sistemas = Carrera::factory()->create(['codigo' => 'SIS', 'nombre' => 'Ingenieria en Sistemas']);
+
+        CupoCarrera::create([
+            'gestion_id' => $gestionActual->id,
+            'carrera_id' => $sistemas->id,
+            'cupo_total' => 300,
+            'cupo_disponible' => 300,
+        ]);
+
+        $response = $this->actingAs($admin)->putJson('/api/asignaciones-carrera/cupos', [
+            'gestion_id' => $gestionAnterior->id,
+            'cupos' => [
+                ['carrera_id' => $sistemas->id, 'cupo_total' => 120],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.cupos.0.gestion_id', $gestionAnterior->id)
+            ->assertJsonPath('data.cupos.0.cupo_total', 120);
+
+        $this->assertDatabaseHas('cupos_carrera', [
+            'gestion_id' => $gestionActual->id,
+            'carrera_id' => $sistemas->id,
+            'cupo_total' => 300,
+            'cupo_disponible' => 300,
+        ]);
+
+        $this->assertDatabaseHas('cupos_carrera', [
+            'gestion_id' => $gestionAnterior->id,
+            'carrera_id' => $sistemas->id,
+            'cupo_total' => 120,
+            'cupo_disponible' => 120,
         ]);
     }
 

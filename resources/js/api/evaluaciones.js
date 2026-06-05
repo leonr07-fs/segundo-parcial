@@ -1,6 +1,7 @@
-export async function uploadEvaluacionesCsv(file) {
+export async function uploadEvaluacionesCsv(file, numeroExamen) {
     const formData = new FormData();
     formData.append('archivo', file);
+    formData.append('numero_examen', numeroExamen);
 
     const response = await window.axios.post('/api/evaluaciones/importar', formData, {
         headers: {

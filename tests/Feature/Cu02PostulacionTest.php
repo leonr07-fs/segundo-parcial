@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Carrera;
-use App\Models\Gestion;
-use App\Models\Inscripcion;
-use App\Models\Postulante;
+use App\Models\AsignacionCarrera\Carrera;
+use App\Models\GestionAcademica\Gestion;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\InscripcionPagos\Postulante;
 use App\Support\States\GestionState;
 use App\Support\States\InscripcionState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,6 +45,8 @@ class Cu02PostulacionTest extends TestCase
                 'gestion_id' => $gestion->id,
                 'carrera_primera_opcion_id' => $primera->id,
                 'carrera_segunda_opcion_id' => $segunda->id,
+                'foto_ci' => \Illuminate\Http\UploadedFile::fake()->create('ci.pdf', 120, 'application/pdf'),
+                'foto_libreta' => \Illuminate\Http\UploadedFile::fake()->create('libreta.pdf', 120, 'application/pdf'),
             ],
             $overrides
         );
@@ -66,7 +68,7 @@ class Cu02PostulacionTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('ok', true)
-            ->assertJsonPath('message', 'Postulación registrada correctamente.')
+            ->assertJsonPath('message', 'Solicitud enviada correctamente. Sera revisada por administracion. Si es aceptada, recibira su numero de registro y contrasena por correo electronico.')
             ->assertJsonPath('data.inscripcion.estado', InscripcionState::PREPOSTULADO);
 
         /* Postulante creado */
@@ -97,9 +99,44 @@ class Cu02PostulacionTest extends TestCase
             'prioridad' => 2,
         ]);
 
+        $this->assertDatabaseHas('documentos', [
+            'inscripcion_id' => $inscripcion->id,
+            'tipo' => 'carnet_identidad',
+            'estado' => 'pendiente',
+        ]);
+        $this->assertDatabaseHas('documentos', [
+            'inscripcion_id' => $inscripcion->id,
+            'tipo' => 'libreta_digitalizada',
+            'estado' => 'pendiente',
+        ]);
+
+        $this->assertNotNull($inscripcion->documentos()->first()->prevalidacion_estado);
+
         /* Auditoría */
         $this->assertDatabaseHas('audit_logs', [
             'event' => 'postulacion.registrada',
+        ]);
+    }
+
+    public function test_prevalidacion_documental_observa_archivos_demasiado_pequenos(): void
+    {
+        $gestion = Gestion::factory()->inscripcion()->create(['anio' => 2026]);
+        $carrera1 = Carrera::factory()->create();
+        $carrera2 = Carrera::factory()->create();
+
+        $payload = $this->datosCompletos($gestion, $carrera1, $carrera2, [
+            'foto_ci' => \Illuminate\Http\UploadedFile::fake()->create('ci.pdf', 0, 'application/pdf'),
+        ]);
+
+        $this->postJson('/api/postulaciones', $payload)->assertCreated();
+
+        $inscripcion = Inscripcion::where('gestion_id', $gestion->id)->first();
+
+        $this->assertDatabaseHas('documentos', [
+            'inscripcion_id' => $inscripcion->id,
+            'tipo' => 'carnet_identidad',
+            'prevalidacion_estado' => 'observado',
+            'prevalidacion_puntaje' => 65,
         ]);
     }
 
@@ -127,6 +164,32 @@ class Cu02PostulacionTest extends TestCase
 
         /* Solo una inscripción */
         $this->assertDatabaseCount('inscripciones', 1);
+    }
+
+    public function test_rechaza_correo_ya_afiliado_a_otro_postulante_con_mensaje_humano(): void
+    {
+        $gestion = Gestion::factory()->inscripcion()->create(['anio' => 2026]);
+        $carrera1 = Carrera::factory()->create();
+        $carrera2 = Carrera::factory()->create();
+        Postulante::factory()->create([
+            'ci' => '1111111',
+            'correo' => 'registrado@gmail.com',
+        ]);
+
+        $payload = $this->datosCompletos($gestion, $carrera1, $carrera2, [
+            'ci' => '2222222',
+            'correo' => 'registrado@gmail.com',
+        ]);
+
+        $response = $this->postJson('/api/postulaciones', $payload);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('message', 'Revise los datos ingresados.')
+            ->assertJsonPath('errors.correo.0', 'Este correo electronico ya fue registrado por otro postulante.');
+
+        $this->assertStringNotContainsString('SQLSTATE', $response->getContent());
+        $this->assertDatabaseCount('inscripciones', 0);
     }
 
     /* ================================================================== */

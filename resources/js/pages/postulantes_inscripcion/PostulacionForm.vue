@@ -1,8 +1,12 @@
 <script setup>
+// [CU02] Registrar postulación CUP - Formulario de captura de datos personales y carrera
+
 import { onMounted, ref, computed } from 'vue';
 import { fetchFormData, storePostulacion } from '../../api/postulaciones';
+import { useToast } from '../../api/toast';
 
 const emit = defineEmits(['back']);
+const toast = useToast();
 
 /* ------------------------------------------------------------------ */
 /*  Estado reactivo                                                    */
@@ -34,6 +38,8 @@ const form = ref({
     ciudad: '',
     carrera_primera_opcion_id: '',
     carrera_segunda_opcion_id: '',
+    foto_ci: null,
+    foto_libreta: null,
 });
 
 /* ------------------------------------------------------------------ */
@@ -65,13 +71,27 @@ onMounted(async () => {
 /*  Submit                                                             */
 /* ------------------------------------------------------------------ */
 
+const handleFileChange = (e, field) => {
+    const file = e.target.files[0];
+    if (file) {
+        form.value[field] = file;
+    }
+};
+
 async function handleSubmit() {
     submitting.value = true;
     serverMessage.value = '';
     fieldErrors.value = {};
 
     try {
-        const payload = await storePostulacion(form.value);
+        const formData = new FormData();
+        Object.keys(form.value).forEach(key => {
+            if (form.value[key] !== null && form.value[key] !== '') {
+                formData.append(key, form.value[key]);
+            }
+        });
+
+        const payload = await storePostulacion(formData);
         success.value = true;
         inscripcionCodigo.value = payload.data.inscripcion.codigo;
         serverMessage.value = payload.message;
@@ -79,9 +99,25 @@ async function handleSubmit() {
         const data = error.response?.data;
         serverMessage.value = data?.message ?? 'Ocurrió un error al registrar la postulación.';
         fieldErrors.value = data?.errors ?? {};
+        await toast.alert({
+            title: 'No se pudo registrar la postulacion',
+            message: errorMessageForModal(),
+            confirmText: 'Aceptar',
+            tone: 'danger',
+        });
     } finally {
         submitting.value = false;
     }
+}
+
+function errorMessageForModal() {
+    const firstFieldError = Object.values(fieldErrors.value)
+        .flat()
+        .find(Boolean);
+
+    return firstFieldError
+        ? `${serverMessage.value}\n\n${firstFieldError}`
+        : serverMessage.value;
 }
 
 function resetForm() {
@@ -105,6 +141,8 @@ function resetForm() {
         ciudad: '',
         carrera_primera_opcion_id: '',
         carrera_segunda_opcion_id: '',
+        foto_ci: null,
+        foto_libreta: null,
     };
 }
 </script>
@@ -354,6 +392,36 @@ function resetForm() {
                     </label>
                 </div>
             </fieldset>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- SECCIÓN: Documentos de Respaldo -->
+            <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 class="mb-4 text-sm font-semibold text-slate-700">Documentos de Respaldo (Digitalizados)</h2>
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Foto Carnet de Identidad <span class="text-red-500">*</span></label>
+                        <input
+                            type="file"
+                            @change="handleFileChange($event, 'foto_ci')"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            class="block w-full text-sm text-slate-500 file:mr-4 file:rounded-md file:border-0 file:bg-cyan-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-700 hover:file:bg-cyan-100 focus:outline-none"
+                        />
+                        <span v-if="fieldErrors.foto_ci" class="mt-1 block text-xs text-red-600">{{ fieldErrors.foto_ci[0] }}</span>
+                        <p class="mt-1 text-xs text-slate-500">JPG, PNG o PDF. Máx 2MB.</p>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Libreta Escolar <span class="text-red-500">*</span></label>
+                        <input
+                            type="file"
+                            @change="handleFileChange($event, 'foto_libreta')"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            class="block w-full text-sm text-slate-500 file:mr-4 file:rounded-md file:border-0 file:bg-cyan-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-700 hover:file:bg-cyan-100 focus:outline-none"
+                        />
+                        <span v-if="fieldErrors.foto_libreta" class="mt-1 block text-xs text-red-600">{{ fieldErrors.foto_libreta[0] }}</span>
+                        <p class="mt-1 text-xs text-slate-500">JPG, PNG o PDF. Máx 2MB.</p>
+                    </div>
+                </div>
+            </div>
 
             <!-- ═══════════════════════════════════════════════════════ -->
             <!-- SECCIÓN 3: Opciones de Carrera                         -->

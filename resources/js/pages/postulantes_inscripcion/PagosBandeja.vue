@@ -1,4 +1,6 @@
 <script setup>
+// [CU04] Registrar/verificar pago - Listado de preinscritos listos para cobro
+
 import { ref, onMounted } from 'vue';
 import { fetchInscripcionesPendientesPago } from '../../api/pagos';
 

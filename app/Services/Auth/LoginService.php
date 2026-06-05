@@ -2,14 +2,20 @@
 
 namespace App\Services\Auth;
 
-use App\Models\User;
-use App\Services\AuditLogService;
+use App\Models\InscripcionPagos\Postulante;
+use App\Models\Seguridad\User;
+use App\Services\SeguridadUsuarios\AuditLogService;
+use App\Support\States\GestionState;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
+/**
+ * CU01: Autenticación de Usuario
+ * Servicio encargado de procesar la lógica de negocio para el inicio y cierre de sesión.
+ */
 class LoginService
 {
     private const MAX_FAILED_ATTEMPTS = 5;
@@ -20,20 +26,20 @@ class LoginService
     }
 
     /**
-     * @param array{email: string, password: string} $credentials
+     * @param array{numero_registro: string, password: string} $credentials
      *
      * @return array<string, mixed>
      */
     public function login(array $credentials, Request $request): array
     {
         /** @var User|null $user */
-        $user = User::query()->where('email', $credentials['email'])->first();
+        $user = User::query()->where('numero_registro', $credentials['numero_registro'])->first();
 
         if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
             $this->registerFailedAttempt($user, $request);
 
             throw ValidationException::withMessages([
-                'email' => ['Las credenciales no son validas.'],
+                'numero_registro' => ['Las credenciales no son validas.'],
             ]);
         }
 
@@ -48,6 +54,8 @@ class LoginService
 
             throw new HttpException(403, 'La cuenta no esta habilitada.');
         }
+
+        $this->ensurePostulanteGestionAccesible($user, $request);
 
         Auth::login($user);
         $request->session()->regenerate();
@@ -87,21 +95,44 @@ class LoginService
      */
     public function userContext(User $user): array
     {
-        return [
+        $context = [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'numero_registro' => $user->numero_registro,
             'role' => $user->role,
             'is_active' => $user->is_active,
             'dashboard_path' => $user->dashboardPath(),
         ];
+
+        $postulante = null;
+        if ($user->role === User::ROLE_POSTULANTE) {
+            $postulante = Postulante::query()
+                ->where('correo', $user->email)
+                ->orWhere('ci', $user->numero_registro)
+                ->first();
+        }
+
+        if ($postulante) {
+            $postulante->load(['inscripciones' => function ($query) {
+                $query->latest('created_at')->limit(1);
+            }]);
+            
+            $context['postulante'] = [
+                'id' => $postulante->id,
+                'ci' => $postulante->ci,
+                'inscripcion_estado' => $postulante->inscripciones->first()?->estado,
+            ];
+        }
+
+        return $context;
     }
 
     private function registerFailedAttempt(?User $user, Request $request): void
     {
         if ($user === null) {
             $this->auditLogService->record('auth.login.failed', null, $request, [
-                'email' => $request->input('email'),
+                'numero_registro' => $request->input('numero_registro'),
             ]);
 
             return;
@@ -121,5 +152,33 @@ class LoginService
             'failed_login_attempts' => $failedAttempts,
             'locked_until' => $lockedUntil?->toISOString(),
         ]);
+    }
+
+    private function ensurePostulanteGestionAccesible(User $user, Request $request): void
+    {
+        if ($user->role !== User::ROLE_POSTULANTE) {
+            return;
+        }
+
+        $postulante = Postulante::query()
+            ->where('correo', $user->email)
+            ->orWhere('ci', $user->numero_registro)
+            ->with(['inscripciones' => function ($query) {
+                $query->with('gestion')->latest('created_at')->limit(1);
+            }])
+            ->first();
+
+        $gestion = $postulante?->inscripciones->first()?->gestion;
+
+        if ($gestion?->estado !== GestionState::CERRADA) {
+            return;
+        }
+
+        $this->auditLogService->record('auth.login.closed_gestion', $user, $request, [
+            'gestion_id' => $gestion->id,
+            'gestion' => $gestion->nombre,
+        ]);
+
+        throw new HttpException(403, 'La gestion CUP ya esta cerrada. El acceso del postulante fue deshabilitado para esta gestion.');
     }
 }

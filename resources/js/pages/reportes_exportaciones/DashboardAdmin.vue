@@ -1,5 +1,9 @@
 <script setup>
-import { computed } from 'vue';
+// [CU18] Dashboard administrativo - Panel principal de indicadores rápidos del proceso CUP
+
+import { computed, onMounted, ref } from 'vue';
+import axios from 'axios';
+import ChangePasswordPanel from '../../components/ChangePasswordPanel.vue';
 
 const props = defineProps({
     user: {
@@ -15,6 +19,26 @@ const props = defineProps({
 const emit = defineEmits(['logout', 'navigate']);
 
 const isAdmin = computed(() => props.user.role === 'admin');
+const resumen = ref(null);
+const cargandoResumen = ref(false);
+
+onMounted(async () => {
+    if (!isAdmin.value) {
+        return;
+    }
+
+    cargandoResumen.value = true;
+    try {
+        const { data } = await axios.get('/api/admin/dashboard');
+        if (data.ok) {
+            resumen.value = data.data;
+        }
+    } catch (error) {
+        console.error('Error cargando resumen administrativo', error);
+    } finally {
+        cargandoResumen.value = false;
+    }
+});
 </script>
 
 <template>
@@ -65,6 +89,7 @@ const isAdmin = computed(() => props.user.role === 'admin');
                         <dd class="font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded-md">{{ roleLabel }}</dd>
                     </div>
                 </dl>
+                <ChangePasswordPanel />
             </aside>
 
             <div class="space-y-6">
@@ -94,10 +119,260 @@ const isAdmin = computed(() => props.user.role === 'admin');
                     </div>
                 </div>
 
-                <!-- Módulo CU03 (Solo Admin para gestionar, Autoridad/Coordinador para ver) -->
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                <!-- Módulo CU05 (Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-blue-900">Resumen del Proceso CUP</h2>
+                            <p class="text-sm text-gray-500 mt-1">
+                                {{ resumen?.gestion_activa ? `Gestion activa: ${resumen.gestion_activa.nombre}` : 'Sin gestion activa para inscripcion' }}
+                            </p>
+                        </div>
+                        <span v-if="cargandoResumen" class="text-xs font-semibold text-gray-400">Cargando...</span>
+                    </div>
+                    <div class="mt-5 grid gap-3 sm:grid-cols-5">
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-semibold uppercase text-slate-500">Postulantes</p>
+                            <p class="mt-2 text-2xl font-bold text-slate-900">{{ resumen?.resumen?.postulantes ?? 0 }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-semibold uppercase text-slate-500">Inscripciones</p>
+                            <p class="mt-2 text-2xl font-bold text-slate-900">{{ resumen?.resumen?.inscripciones ?? 0 }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-semibold uppercase text-slate-500">Evaluaciones</p>
+                            <p class="mt-2 text-2xl font-bold text-slate-900">{{ resumen?.resumen?.evaluaciones ?? 0 }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-semibold uppercase text-slate-500">Pendientes</p>
+                            <p class="mt-2 text-2xl font-bold text-slate-900">{{ resumen?.resumen?.evaluaciones_pendientes ?? 0 }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-xs font-semibold uppercase text-slate-500">Carreras</p>
+                            <p class="mt-2 text-2xl font-bold text-slate-900">{{ resumen?.resumen?.asignaciones_carrera ?? 0 }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <section v-if="isAdmin" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h2 class="text-lg font-bold text-blue-950">Inscripcion y Pagos</h2>
+                    </div>
+                    <div class="mt-4 grid gap-3">
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Gestion de Postulantes</h3>
+                                    <p class="text-sm text-slate-500">Busca, consulta expedientes y actualiza datos de postulantes (CU05).</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/postulantes')" class="rounded-lg bg-purple-50 px-4 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-600 hover:text-white">Ver Postulantes</button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Validacion Documental</h3>
+                                    <p class="text-sm text-slate-500">Gestiona los requisitos documentales de los postulantes (CU03).</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/validacion-documental')" class="rounded-lg bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-600 hover:text-white">Gestionar</button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Pagos CUP</h3>
+                                    <p class="text-sm text-slate-500">Verifica y registra pagos para confirmar inscripciones (CU04).</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/pagos')" class="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-600 hover:text-white">Gestionar Pagos</button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Solicitudes Docentes</h3>
+                                    <p class="text-sm text-slate-500">Revisa postulaciones docentes, documentos y credenciales de acceso.</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/solicitudes-docentes')" class="rounded-lg bg-cyan-50 px-4 py-2 text-sm font-bold text-cyan-700 transition hover:bg-cyan-600 hover:text-white">Revisar</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section v-if="isAdmin" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h2 class="text-lg font-bold text-blue-950">Gestion Academica</h2>
+                    </div>
+                    <div class="mt-4 grid gap-3">
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Parametros Academicos</h3>
+                                    <p class="text-sm text-slate-500">Configura materias, aulas y grupos para la gestion (CU08).</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/parametros')" class="rounded-lg bg-teal-50 px-4 py-2 text-sm font-bold text-teal-700 transition hover:bg-teal-600 hover:text-white">Configurar</button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Asignar Carreras</h3>
+                                    <p class="text-sm text-slate-500">Distribuir cupos por orden de merito (CU12).</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/asignaciones-carrera')" class="rounded-lg bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-600 hover:text-white">Gestionar Cupos</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section v-if="isAdmin" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h2 class="text-lg font-bold text-blue-950">Evaluaciones y Resultados</h2>
+                    </div>
+                    <div class="mt-4 grid gap-3">
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Evaluaciones Masivas</h3>
+                                    <p class="text-sm text-slate-500">Importar resultados academicos desde Excel (CU09).</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/evaluaciones/importar')" class="rounded-lg bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 transition hover:bg-indigo-600 hover:text-white">Subir Notas</button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Consultar Notas de Evaluacion</h3>
+                                    <p class="text-sm text-slate-500">Busca y visualiza las notas registradas por grupo y materia (CU14).</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/notas')" class="rounded-lg bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-600 hover:text-white">Ver Notas</button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Validaciones Academicas</h3>
+                                    <p class="text-sm text-slate-500">Supervisar evaluaciones incompletas u observadas (CU10).</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/validaciones-academicas')" class="rounded-lg bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700 transition hover:bg-orange-600 hover:text-white">Supervisar</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section v-if="isAdmin" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h2 class="text-lg font-bold text-blue-950">Reportes y Auditoria</h2>
+                    </div>
+                    <div class="mt-4 grid gap-3">
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Reportes y Exportaciones</h3>
+                                    <p class="text-sm text-slate-500">Genera reportes oficiales y dinamicos por gestion, fechas y columnas.</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/reportes')" class="rounded-lg bg-cyan-50 px-4 py-2 text-sm font-bold text-cyan-700 transition hover:bg-cyan-600 hover:text-white">Generar Reportes</button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-blue-900">Bitacora Auditora</h3>
+                                    <p class="text-sm text-slate-500">Ver registro detallado de movimientos del sistema.</p>
+                                </div>
+                                <button @click="emit('navigate', '/admin/bitacora')" class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700">Ver Historial</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <template v-if="false">
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-cyan-600">Reportes y Auditoria</p>
+                            <h2 class="text-lg font-bold text-blue-900">Reportes y Exportaciones</h2>
+                            <p class="text-sm text-gray-500 mt-1">Genera reportes oficiales y dinamicos por gestion, fechas y columnas.</p>
+                        </div>
+                        <button
+                            @click="emit('navigate', '/admin/reportes')"
+                            class="rounded-xl bg-cyan-50 px-5 py-2.5 text-sm font-bold text-cyan-700 transition hover:bg-cyan-600 hover:text-white shrink-0"
+                        >
+                            Generar Reportes
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-purple-600">Inscripcion y Pagos</p>
+                            <h2 class="text-lg font-bold text-blue-900">Gestión de Postulantes</h2>
+                            <p class="text-sm text-gray-500 mt-1">Busca, consulta expedientes y actualiza datos de postulantes (CU05).</p>
+                        </div>
+                        <button
+                            @click="emit('navigate', '/admin/postulantes')"
+                            class="rounded-xl bg-purple-50 px-5 py-2.5 text-sm font-bold text-purple-700 transition hover:bg-purple-600 hover:text-white shrink-0"
+                        >
+                            Ver Postulantes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Módulo CU08 (Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-teal-600">Gestion Academica</p>
+                            <h2 class="text-lg font-bold text-blue-900">Parámetros Académicos</h2>
+                            <p class="text-sm text-gray-500 mt-1">Configura materias, aulas y grupos para la gestión (CU08).</p>
+                        </div>
+                        <button
+                            @click="emit('navigate', '/admin/parametros')"
+                            class="rounded-xl bg-teal-50 px-5 py-2.5 text-sm font-bold text-teal-700 transition hover:bg-teal-600 hover:text-white shrink-0"
+                        >
+                            Configurar
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-cyan-600">Inscripcion y Pagos</p>
+                            <h2 class="text-lg font-bold text-blue-900">Solicitudes Docentes</h2>
+                            <p class="max-w-xl text-sm text-gray-500 mt-1">Revisa postulaciones docentes, documentos y credenciales de acceso.</p>
+                        </div>
+                        <button
+                            @click="emit('navigate', '/admin/solicitudes-docentes')"
+                            class="rounded-xl bg-cyan-50 px-5 py-2.5 text-sm font-bold text-cyan-700 transition hover:bg-cyan-600 hover:text-white shrink-0"
+                        >
+                            Revisar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Módulo CU14 (Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-blue-600">Evaluaciones y Resultados</p>
+                            <h2 class="text-lg font-bold text-blue-900">Consultar Notas de Evaluación</h2>
+                            <p class="text-sm text-gray-500 mt-1">Busca y visualiza las notas registradas por grupo y materia (CU14).</p>
+                        </div>
+                        <button
+                            @click="emit('navigate', '/admin/notas')"
+                            class="rounded-xl bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-700 transition hover:bg-blue-600 hover:text-white shrink-0"
+                        >
+                            Ver Notas
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Módulo CU03 (Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-blue-600">Inscripcion y Pagos</p>
                             <h2 class="text-lg font-bold text-blue-900">Validación Documental</h2>
                             <p class="text-sm text-gray-500 mt-1">Gestiona los requisitos documentales de los postulantes (CU03).</p>
                         </div>
@@ -105,15 +380,16 @@ const isAdmin = computed(() => props.user.role === 'admin');
                             @click="emit('navigate', '/admin/validacion-documental')"
                             class="rounded-xl bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-700 transition hover:bg-blue-600 hover:text-white shrink-0"
                         >
-                            {{ isAdmin ? 'Gestionar' : 'Ver Lista' }}
+                            Gestionar
                         </button>
                     </div>
                 </div>
 
-                <!-- Módulo CU04 (Solo Admin para gestionar, Autoridad/Coordinador para ver) -->
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                <!-- Módulo CU04 (Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-emerald-600">Inscripcion y Pagos</p>
                             <h2 class="text-lg font-bold text-blue-900">Pagos CUP</h2>
                             <p class="text-sm text-gray-500 mt-1">Verifica y registra pagos para confirmar inscripciones (CU04).</p>
                         </div>
@@ -121,33 +397,33 @@ const isAdmin = computed(() => props.user.role === 'admin');
                             @click="emit('navigate', '/admin/pagos')"
                             class="rounded-xl bg-emerald-50 px-5 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-600 hover:text-white shrink-0"
                         >
-                            {{ isAdmin ? 'Gestionar Pagos' : 'Ver Pagos' }}
+                            Gestionar Pagos
                         </button>
                     </div>
                 </div>
 
-                <!-- Módulo CU09 (Solo Admin para subir notas) -->
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                <!-- Módulo CU09 (Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-indigo-600">Evaluaciones y Resultados</p>
                             <h2 class="text-lg font-bold text-blue-900">Evaluaciones (Masivo)</h2>
                             <p class="text-sm text-gray-500 mt-1">Importar resultados académicos desde Excel (CU09).</p>
                         </div>
                         <button
                             @click="emit('navigate', '/admin/evaluaciones/importar')"
                             class="rounded-xl bg-indigo-50 px-5 py-2.5 text-sm font-bold text-indigo-700 transition hover:bg-indigo-600 hover:text-white shrink-0"
-                            :disabled="!isAdmin"
-                            :class="!isAdmin ? 'opacity-50 cursor-not-allowed' : ''"
                         >
                             Subir Notas
                         </button>
                     </div>
                 </div>
 
-                <!-- Módulo CU10 (Admin, Autoridad, Coordinador) -->
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                <!-- Módulo CU10 (Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-orange-600">Evaluaciones y Resultados</p>
                             <h2 class="text-lg font-bold text-blue-900">Validaciones Académicas</h2>
                             <p class="text-sm text-gray-500 mt-1">Supervisar evaluaciones incompletas u observadas (CU10).</p>
                         </div>
@@ -160,10 +436,11 @@ const isAdmin = computed(() => props.user.role === 'admin');
                     </div>
                 </div>
 
-                <!-- Módulo CU12 (Solo Admin para ejecutar, Autoridad/Coordinador para ver) -->
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                <!-- Módulo CU12 (Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-red-600">Gestion Academica</p>
                             <h2 class="text-lg font-bold text-blue-900">Asignar Carreras</h2>
                             <p class="text-sm text-gray-500 mt-1">Distribuir cupos por orden de mérito (CU12).</p>
                         </div>
@@ -171,10 +448,31 @@ const isAdmin = computed(() => props.user.role === 'admin');
                             @click="emit('navigate', '/admin/asignaciones-carrera')"
                             class="rounded-xl bg-red-50 px-5 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-600 hover:text-white shrink-0"
                         >
-                            {{ isAdmin ? 'Gestionar Cupos' : 'Ver Asignaciones' }}
+                            Gestionar Cupos
                         </button>
                     </div>
                 </div>
+
+                <!-- Bitácora Auditora (Solo Admin) -->
+                <div v-if="isAdmin" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Reportes y Auditoria</p>
+                            <h2 class="text-lg font-bold text-blue-900 flex items-center gap-2">
+                                <svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                Bitácora Auditora
+                            </h2>
+                            <p class="text-sm text-gray-500 mt-1">Ver registro detallado de movimientos del sistema.</p>
+                        </div>
+                        <button
+                            @click="emit('navigate', '/admin/bitacora')"
+                            class="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-700 shrink-0"
+                        >
+                            Ver Historial
+                        </button>
+                    </div>
+                </div>
+                </template>
             </div>
         </div>
     </div>

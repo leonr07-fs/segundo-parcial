@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Inscripcion;
-use App\Models\Pago;
-use App\Models\User;
-use App\Services\PagoService;
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\InscripcionPagos\Pago;
+use App\Models\Seguridad\User;
+use App\Services\PortalPostulante\PagoService;
 use App\Support\States\InscripcionState;
 use App\Support\States\PagoState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -59,7 +59,23 @@ class Cu04PagoTest extends TestCase
             ->postJson("/api/inscripciones/{$inscripcion->id}/pagos", $payload);
 
         $response->assertOk()
-            ->assertJsonPath('ok', true);
+            ->assertJsonPath('ok', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'pago',
+                    'recibo',
+                    'credenciales' => [
+                        'numero_registro',
+                        'password_temporal',
+                        'correo_enviado',
+                    ],
+                ],
+            ]);
+
+        $numeroRegistro = $response->json('data.credenciales.numero_registro');
+        $passwordTemporal = $response->json('data.credenciales.password_temporal');
+        $this->assertMatchesRegularExpression('/^\d{9}$/', $numeroRegistro);
+        $this->assertSame($inscripcion->postulante->ci, $passwordTemporal);
 
         // Validar que se creó el pago aprobado
         $this->assertDatabaseHas('pagos', [
@@ -87,6 +103,31 @@ class Cu04PagoTest extends TestCase
         // Validar auditoría
         $this->assertDatabaseHas('audit_logs', [
             'event' => 'pago.registrado',
+            'user_id' => $this->admin->id,
+        ]);
+
+        // Validar usuario creado
+        $postulante = $inscripcion->postulante;
+        $this->assertDatabaseHas('users', [
+            'email' => $postulante->correo,
+            'role' => User::ROLE_POSTULANTE,
+            'is_active' => true,
+        ]);
+
+        // Validar inicio de sesión del postulante con sus nuevas credenciales
+        $this->postJson('/logout');
+
+        $loginResponse = $this->postJson('/login', [
+            'numero_registro' => $numeroRegistro,
+            'password' => $passwordTemporal,
+        ]);
+        $loginResponse->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.user.role', User::ROLE_POSTULANTE);
+
+        // Validar auditoría de credenciales
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'postulante.credenciales.emitidas',
             'user_id' => $this->admin->id,
         ]);
     }
@@ -187,5 +228,96 @@ class Cu04PagoTest extends TestCase
             ->getJson('/api/inscripciones/pendientes-pago');
 
         $responseGet->assertForbidden();
+    }
+
+    /* ================================================================== */
+    /*  TEST 7: Seguridad de Colisiones y Roles                           */
+    /* ================================================================== */
+
+    public function test_postulacion_falla_si_correo_coincide_con_usuario_existente(): void
+    {
+        // Crear un usuario con el correo que intentará registrar el postulante
+        User::factory()->create([
+            'email' => 'admin@cup.test',
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        $payload = [
+            'gestion_id' => \App\Models\GestionAcademica\Gestion::factory()->create(['estado' => 'inscripcion'])->id,
+            'ci' => '12345678',
+            'nombres' => 'Juan',
+            'apellido_paterno' => 'Perez',
+            'fecha_nacimiento' => '2000-01-01',
+            'genero' => 'masculino',
+            'correo' => 'admin@cup.test',
+            'telefono' => '70000000',
+            'colegio_procedencia' => 'Colegio Nacional',
+            'ciudad' => 'Santa Cruz',
+            'carrera_primera_opcion_id' => \App\Models\AsignacionCarrera\Carrera::factory()->create(['activa' => true])->id,
+            'carrera_segunda_opcion_id' => \App\Models\AsignacionCarrera\Carrera::factory()->create(['activa' => true])->id,
+            'foto_ci' => \Illuminate\Http\UploadedFile::fake()->create('ci.jpg', 500),
+            'foto_libreta' => \Illuminate\Http\UploadedFile::fake()->create('libreta.jpg', 500),
+        ];
+
+        $response = $this->postJson('/api/postulaciones', $payload);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['correo']);
+    }
+
+    public function test_postulacion_falla_si_ci_coincide_con_usuario_existente(): void
+    {
+        // Crear un usuario cuyo número de registro es igual al CI que usará el postulante
+        User::factory()->create([
+            'numero_registro' => '87654321',
+            'role' => User::ROLE_DOCENTE,
+        ]);
+
+        $payload = [
+            'gestion_id' => \App\Models\GestionAcademica\Gestion::factory()->create(['estado' => 'inscripcion'])->id,
+            'ci' => '87654321',
+            'nombres' => 'Juan',
+            'apellido_paterno' => 'Perez',
+            'fecha_nacimiento' => '2000-01-01',
+            'genero' => 'masculino',
+            'correo' => 'juan@test.com',
+            'telefono' => '70000000',
+            'colegio_procedencia' => 'Colegio Nacional',
+            'ciudad' => 'Santa Cruz',
+            'carrera_primera_opcion_id' => \App\Models\AsignacionCarrera\Carrera::factory()->create(['activa' => true])->id,
+            'carrera_segunda_opcion_id' => \App\Models\AsignacionCarrera\Carrera::factory()->create(['activa' => true])->id,
+            'foto_ci' => \Illuminate\Http\UploadedFile::fake()->create('ci.jpg', 500),
+            'foto_libreta' => \Illuminate\Http\UploadedFile::fake()->create('libreta.jpg', 500),
+        ];
+
+        $response = $this->postJson('/api/postulaciones', $payload);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['ci']);
+    }
+
+    public function test_pago_falla_si_email_postulante_coincide_con_rol_diferente(): void
+    {
+        $inscripcion = Inscripcion::factory()->create(['estado' => InscripcionState::DOCUMENTOS_APROBADOS]);
+        
+        // Asignamos al postulante el mismo correo que un admin existente
+        $postulante = $inscripcion->postulante;
+        $postulante->update(['correo' => 'admin@cup.test']);
+
+        User::factory()->create([
+            'email' => 'admin@cup.test',
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        $payload = [
+            'monto' => PagoService::ARANCEL_CUP,
+            'metodo' => 'Transferencia Bancaria',
+            'referencia' => 'TX-98765',
+        ];
+
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/inscripciones/{$inscripcion->id}/pagos", $payload);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('message', 'El correo del postulante pertenece a un usuario con un rol diferente.');
     }
 }
