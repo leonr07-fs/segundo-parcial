@@ -11,6 +11,11 @@ use App\Support\States\GestionState;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU09 - Cargar/importar resultados académicos
+ * CU11 - Calcular promedio final y determinar estado
+ * Procesa archivos CSV de notas y actualiza evaluaciones, resultados CUP y estado académico.
+ */
 class ImportacionResultadosService
 {
     /**

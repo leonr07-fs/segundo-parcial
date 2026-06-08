@@ -15,6 +15,9 @@ import ValidacionBandeja from './pages/postulantes_inscripcion/ValidacionBandeja
 import ValidacionDetalle from './pages/postulantes_inscripcion/ValidacionDetalle.vue';
 import PagosBandeja from './pages/postulantes_inscripcion/PagosBandeja.vue';
 import PagoForm from './pages/postulantes_inscripcion/PagoForm.vue';
+import ConsultaPostulacion from './pages/postulantes_inscripcion/ConsultaPostulacion.vue';
+import RepostulacionPublica from './pages/postulantes_inscripcion/RepostulacionPublica.vue';
+import RepostulacionDocentePublica from './pages/postulantes_inscripcion/RepostulacionDocentePublica.vue';
 
 // 3. Gestión Académica
 import ImportarResultados from './pages/gestion_academica/ImportarResultados.vue';
@@ -25,6 +28,7 @@ import PostulanteExpediente from './pages/gestion_academica/PostulanteExpediente
 import ParametrosBandeja from './pages/gestion_academica/ParametrosBandeja.vue';
 import ConsultarNotas from './pages/gestion_academica/ConsultarNotas.vue';
 import SolicitudesDocentesBandeja from './pages/gestion_academica/SolicitudesDocentesBandeja.vue';
+import RepostulacionesDocentesBandeja from './pages/gestion_academica/RepostulacionesDocentesBandeja.vue';
 
 // 4. Reportes y Exportaciones (Dashboards)
 import DashboardAdmin from './pages/reportes_exportaciones/DashboardAdmin.vue';
@@ -53,6 +57,9 @@ const tipoPostulacion = ref('postulante');
 // Rutas simples (Simulando un Router)
 const isLoginPage = computed(() => currentPath.value === '/login' || currentPath.value === '/');
 const isPostulacionPage = computed(() => currentPath.value === '/postulaciones/crear');
+const isConsultaPostulacionPage = computed(() => currentPath.value === '/consulta-postulacion');
+const isRepostulacionPage = computed(() => currentPath.value === '/repostulacion');
+const isRepostulacionDocentePage = computed(() => currentPath.value === '/repostulacion-docente');
 
 // CU03: Rutas de admin (Validación Documental)
 const isAdminValidacionBandeja = computed(() => currentPath.value === '/admin/validacion-documental');
@@ -74,6 +81,7 @@ const isAdminParametrosBandeja = computed(() => currentPath.value === '/admin/pa
 // CU14: Consultar Notas
 const isAdminConsultarNotas = computed(() => currentPath.value === '/admin/notas');
 const isAdminSolicitudesDocentes = computed(() => currentPath.value === '/admin/solicitudes-docentes');
+const isAdminRepostulacionesDocentes = computed(() => currentPath.value === '/admin/repostulaciones-docentes');
 
 // CU04: Rutas de admin (Pagos)
 const isAdminPagosBandeja = computed(() => currentPath.value === '/admin/pagos');
@@ -227,6 +235,75 @@ window.addEventListener('popstate', () => {
             </div>
         </section>
 
+        <!-- PÁGINA: Repostulación pública -->
+        <section v-else-if="isRepostulacionPage" class="min-h-screen bg-slate-100">
+            <header class="border-b border-slate-200 bg-white">
+                <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-indigo-700">CUP FICCT</p>
+                        <h1 class="text-lg font-semibold text-slate-950">Repostulación</h1>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        @click="navigateTo('/login')"
+                    >
+                        Volver al inicio
+                    </button>
+                </div>
+            </header>
+
+            <div class="mx-auto max-w-6xl px-6">
+                <RepostulacionPublica @back="navigateTo('/login')" />
+            </div>
+        </section>
+
+        <!-- PÁGINA: Repostulación docente pública -->
+        <section v-else-if="isRepostulacionDocentePage" class="min-h-screen bg-slate-100">
+            <header class="border-b border-slate-200 bg-white">
+                <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-cyan-700">CUP FICCT</p>
+                        <h1 class="text-lg font-semibold text-slate-950">Repostulación Docente</h1>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        @click="navigateTo('/login')"
+                    >
+                        Volver al inicio
+                    </button>
+                </div>
+            </header>
+
+            <div class="mx-auto max-w-6xl px-6">
+                <RepostulacionDocentePublica />
+            </div>
+        </section>
+
+        <!-- PÁGINA: Consulta pública de estado de postulación -->
+        <section v-else-if="isConsultaPostulacionPage" class="min-h-screen bg-slate-100">
+            <header class="border-b border-slate-200 bg-white">
+                <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-cyan-700">CUP FICCT</p>
+                        <h1 class="text-lg font-semibold text-slate-950">Estado de Postulación</h1>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        @click="navigateTo('/login')"
+                    >
+                        Volver al inicio
+                    </button>
+                </div>
+            </header>
+
+            <div class="mx-auto max-w-6xl px-6">
+                <ConsultaPostulacion @back="navigateTo('/login')" />
+            </div>
+        </section>
+
         <!-- PÁGINA: Login -->
         <Login
             v-else-if="!user"
@@ -327,6 +404,29 @@ window.addEventListener('popstate', () => {
 
             <div class="mx-auto max-w-6xl px-6 py-8">
                 <ParametrosBandeja @navigate="navigateTo" />
+            </div>
+        </section>
+
+        <!-- PÁGINAS: Repostulaciones Docentes -->
+        <section v-else-if="user?.role === 'admin' && isAdminRepostulacionesDocentes" class="min-h-screen bg-slate-100">
+            <header class="border-b border-slate-200 bg-white">
+                <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-cyan-700">Administración CUP</p>
+                        <h1 class="text-lg font-semibold text-slate-950">Repostulaciones Docentes</h1>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        @click="navigateTo(user.dashboard_path)"
+                    >
+                        Volver al Panel
+                    </button>
+                </div>
+            </header>
+
+            <div class="mx-auto max-w-6xl px-6 py-8">
+                <RepostulacionesDocentesBandeja />
             </div>
         </section>
 

@@ -12,6 +12,7 @@ use App\Models\GestionAcademica\GrupoMateria;
 use App\Models\InscripcionPagos\Inscripcion;
 use App\Models\InscripcionPagos\Postulante;
 use App\Services\GestionAcademica\CupExamenService;
+use App\Services\GestionAcademica\GestionVigenteService;
 use App\Services\GruposDocentes\AsistenciaDocenteService;
 use App\Support\States\GestionState;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,10 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly GestionVigenteService $gestionVigenteService)
+    {
+    }
+
     public function admin(): JsonResponse
     {
         $gestionActiva = Gestion::where('estado', GestionState::INSCRIPCION)
@@ -52,6 +57,13 @@ class DashboardController extends Controller
         $docente = Docente::where('ci', $user->numero_registro)
             ->orWhere('correo', $user->email)
             ->first();
+
+        if ($docente !== null && ! $this->gestionVigenteService->docentePuedeAcceder($docente)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No pertenece a la gestion vigente. Debe realizar una repostulacion docente desde la pagina inicial.',
+            ], 403);
+        }
 
         if ($docente === null) {
             return response()->json([
@@ -108,6 +120,8 @@ class DashboardController extends Controller
             ->with([
                 'inscripciones' => fn ($query) => $query->latest('id'),
                 'inscripciones.gestion',
+                'inscripciones.validacionDocumental',
+                'inscripciones.documentos',
                 'inscripciones.grupos.aula',
                 'inscripciones.evaluaciones.grupoMateria.materia',
                 'inscripciones.evaluaciones.grupoMateria.horarios.aula',
@@ -131,12 +145,20 @@ class DashboardController extends Controller
             ]);
         }
 
-        $inscripcion = $postulante->inscripciones->first();
+        $gestionVigente = $this->gestionVigenteService->actual();
+        $inscripcion = $this->gestionVigenteService->inscripcionEnGestionVigente($postulante, $gestionVigente);
 
-        if ($inscripcion?->gestion?->estado === GestionState::CERRADA) {
+        if ($inscripcion === null) {
             return response()->json([
                 'ok' => false,
-                'message' => 'La gestion CUP ya esta cerrada. Solo administracion puede consultar los resultados historicos.',
+                'message' => 'No pertenece a la gestion vigente. Debe realizar una repostulacion desde la pagina inicial.',
+            ], 403);
+        }
+
+        if ($inscripcion->resultadoCup?->estado_final === 'reprobado') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Su gestion fue reprobada. Debe realizar una repostulacion desde la pagina inicial.',
             ], 403);
         }
 
@@ -152,6 +174,16 @@ class DashboardController extends Controller
                     'codigo' => $inscripcion->codigo,
                     'estado' => $inscripcion->estado,
                     'gestion' => $inscripcion->gestion?->nombre,
+                    'validacion_documental' => $inscripcion->validacionDocumental ? [
+                        'estado' => $inscripcion->validacionDocumental->estado,
+                        'observacion' => $inscripcion->validacionDocumental->observacion,
+                        'validado_en' => $inscripcion->validacionDocumental->validado_en?->toISOString(),
+                    ] : null,
+                    'documentos' => $inscripcion->documentos->map(fn ($doc) => [
+                        'tipo' => $doc->tipo,
+                        'estado' => $doc->estado,
+                        'observacion' => $doc->observacion ?? null,
+                    ])->values(),
                 ] : null,
                 'grupo' => $grupo ? [
                     'id' => $grupo->id,

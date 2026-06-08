@@ -91,35 +91,8 @@ class PrevalidacionDocumentalService
 
         $estadoInscripcion = $criticos > 0 ? self::ESTADO_CRITICO : ($observados > 0 ? self::ESTADO_OBSERVADO : self::ESTADO_OK);
 
-        // Auto-Aprobación: si todos los documentos obligatorios están prevalidados como OK
-        if ($totalCount >= 2 && $okCount === $totalCount && $estadoInscripcion === self::ESTADO_OK) {
-            DB::transaction(function () use ($inscripcion) {
-                // Actualizar estado de cada documento individual a 'aprobado'
-                foreach ($inscripcion->documentos as $documento) {
-                    $documento->update([
-                        'estado' => DocumentoState::APROBADO,
-                        'observacion' => 'Aprobado automáticamente por validación OCR e IA.',
-                        'revisado_en' => now(),
-                    ]);
-                }
-
-                // Registrar la validación documental global como APROBADA
-                \App\Models\InscripcionPagos\ValidacionDocumental::updateOrCreate(
-                    ['inscripcion_id' => $inscripcion->id],
-                    [
-                        'estado' => ValidacionDocumentalState::APROBADA,
-                        'validado_por' => null, // Validado por sistema
-                        'validado_en' => now(),
-                        'observacion' => 'Aprobado automáticamente por validación OCR e IA.',
-                    ]
-                );
-
-                // Cambiar el estado de la inscripción a documentos_aprobados
-                $inscripcion->update([
-                    'estado' => InscripcionState::DOCUMENTOS_APROBADOS
-                ]);
-            });
-        }
+        // La aprobación documental siempre requiere revisión manual del administrador.
+        // La prevalidación OCR solo genera un puntaje y observaciones orientativas.
 
         return [
             'estado' => $estadoInscripcion,

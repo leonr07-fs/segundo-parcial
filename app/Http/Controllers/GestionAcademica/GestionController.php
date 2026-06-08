@@ -9,6 +9,10 @@ use App\Support\States\GestionState;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU08 - Parametrizar gestiones, materias, aulas y grupos
+ * Permite gestionar el ciclo académico de gestiones y el estado de inscripciones.
+ */
 class GestionController extends Controller
 {
     public function index()

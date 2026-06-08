@@ -3,6 +3,7 @@
 
 import { computed, ref, onMounted } from 'vue';
 import { fetchExpedienteDocumental, submitValidacionDocumental } from '../../api/validacion-documental';
+import { urlDocumentoPostulante } from '../../api/documentos';
 
 const props = defineProps({
     inscripcionId: {
@@ -90,11 +91,11 @@ function formatDate(value) {
 }
 
 function documentUrl(doc) {
-    if (!doc.archivo_path) {
+    if (!doc.archivo_path || !doc.id) {
         return null;
     }
 
-    return `/storage/${doc.archivo_path}`;
+    return urlDocumentoPostulante(doc.id);
 }
 
 function documentFileName(doc) {

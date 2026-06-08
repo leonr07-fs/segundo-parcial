@@ -9,6 +9,10 @@ use App\Support\States\AsignacionCarreraState;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * CU12 - Asignar carrera por cupos (1ra opción y 2da opción)
+ * Ejecuta la asignación de carrera a postulantes aprobados según cupos disponibles y prioridad de opción.
+ */
 class AsignacionCarreraService
 {
     /**

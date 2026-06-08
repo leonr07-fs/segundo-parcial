@@ -4,6 +4,7 @@
 import { computed, onMounted, ref } from 'vue';
 import axios from 'axios';
 import ChangePasswordPanel from '../../components/ChangePasswordPanel.vue';
+import PayPalCheckout from '../../components/PayPalCheckout.vue';
 
 const props = defineProps({
     user: {
@@ -18,18 +19,48 @@ const props = defineProps({
 
 const emit = defineEmits(['logout', 'navigate']);
 
-const gestionesAbiertas = ref([]);
-const carreras = ref([]);
 const academico = ref(null);
 const cargandoAcademico = ref(false);
-const cargandoRepostulacion = ref(false);
-const formRepostulacion = ref({
-    gestion_id: '',
-    opcion1_carrera_id: '',
-    opcion2_carrera_id: '',
+const pagoPayPalExitoso = ref(false);
+
+const estadoInscripcion = computed(() => academico.value?.inscripcion?.estado || '');
+const mostrarPayPal = computed(() => estadoInscripcion.value === 'documentos_aprobados' && !pagoPayPalExitoso.value);
+const estaPagado = computed(() => estadoInscripcion.value === 'pagado' || estadoInscripcion.value === 'inscrito' || pagoPayPalExitoso.value);
+const estaEnRevision = computed(() => estadoInscripcion.value === 'prepostulado');
+const tieneObservaciones = computed(() => estadoInscripcion.value === 'documentos_pendientes');
+const validacionDocumental = computed(() => academico.value?.inscripcion?.validacion_documental || null);
+const documentosInscritos = computed(() => academico.value?.inscripcion?.documentos || []);
+const observacionesDocumentos = computed(() => {
+    return documentosInscritos.value
+        .filter(d => d.observacion && (d.estado === 'observado' || d.estado === 'rechazado'))
+        .map(d => ({ tipo: d.tipo?.replace(/_/g, ' '), estado: d.estado, observacion: d.observacion }));
 });
-const mensajeExito = ref('');
-const errorMensaje = ref('');
+const estadoPostulacionLabel = computed(() => {
+    const labels = {
+        prepostulado: 'Postulación enviada — En revisión',
+        documentos_pendientes: 'Documentación observada — Requiere corrección',
+        documentos_aprobados: 'Documentación aprobada — Pendiente de pago',
+        pagado: 'Pago confirmado',
+        inscrito: 'Inscripción completada',
+        reprobado: 'Gestión reprobada',
+    };
+    return labels[estadoInscripcion.value] || 'Sin postulación activa';
+});
+
+function handlePagoExitoso(result) {
+    pagoPayPalExitoso.value = true;
+    // Recargar datos académicos para reflejar el nuevo estado
+    setTimeout(async () => {
+        try {
+            const { data: academicoData } = await axios.get('/api/postulante/academico');
+            if (academicoData.ok) {
+                academico.value = academicoData.data;
+            }
+        } catch (e) {
+            console.error('Error recargando datos tras pago', e);
+        }
+    }, 2000);
+}
 
 const examenCup = computed(() => academico.value?.examen_cup ?? {
     estado: 'pendiente',
@@ -58,37 +89,7 @@ onMounted(async () => {
         cargandoAcademico.value = false;
     }
 
-    cargandoRepostulacion.value = true;
-    try {
-        const { data: formData } = await axios.get('/api/postulaciones/create');
-        if (formData.ok) {
-            carreras.value = formData.data.carreras;
-            gestionesAbiertas.value = formData.data.gestion ? [formData.data.gestion] : [];
-        }
-    } catch (e) {
-        gestionesAbiertas.value = [];
-        console.info('No hay gestion abierta para repostulacion en este momento.');
-    } finally {
-        cargandoRepostulacion.value = false;
-    }
 });
-
-const repostular = async () => {
-    errorMensaje.value = '';
-    mensajeExito.value = '';
-    try {
-        const payload = {
-            ...formRepostulacion.value,
-            postulante_id: props.user.postulante?.id || academico.value?.postulante?.id || props.user.id,
-        };
-        const { data } = await axios.post('/api/postulantes/repostular', payload);
-        if (data.ok) {
-            mensajeExito.value = data.message;
-        }
-    } catch (error) {
-        errorMensaje.value = error.response?.data?.message || 'Error al procesar la solicitud.';
-    }
-};
 
 const formatoNota = (nota) => nota === null || nota === undefined ? '-' : Number(nota).toFixed(2);
 const formatoHorario = (materia) => {
@@ -336,6 +337,99 @@ const imprimirBoletaHorario = async () => {
                     </div>
                 </div>
 
+                <!-- BLOQUE: Estado de Postulación y Pago PayPal -->
+                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">Estado de Postulación</p>
+                            <h3 class="mt-1 text-lg font-bold text-blue-950">{{ estadoPostulacionLabel }}</h3>
+                        </div>
+                        <span
+                            class="mt-1 shrink-0 rounded-full px-3 py-1 text-xs font-bold"
+                            :class="{
+                                'bg-amber-100 text-amber-700': estaEnRevision,
+                                'bg-blue-100 text-blue-700': mostrarPayPal,
+                                'bg-emerald-100 text-emerald-700': estaPagado,
+                                'bg-red-100 text-red-700': estadoInscripcion === 'reprobado',
+                            }"
+                        >
+                            {{ estadoInscripcion || 'N/A' }}
+                        </span>
+                        <span v-if="tieneObservaciones"
+                            class="mt-1 shrink-0 rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-700"
+                        >
+                            observado
+                        </span>
+                    </div>
+
+                    <!-- Sub-estado: Postulación enviada, esperando revisión -->
+                    <div v-if="estaEnRevision" class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                        <p class="font-semibold">📋 Postulación enviada — Validación de documentos pendiente</p>
+                        <p class="mt-1">Tu documentación fue recibida y está siendo revisada por el equipo administrativo. Una vez aprobada, se habilitará la opción de pago.</p>
+                    </div>
+
+                    <!-- Sub-estado: Documentos observados / requieren corrección -->
+                    <div v-else-if="tieneObservaciones" class="mt-5 space-y-3">
+                        <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800">
+                            <p class="font-semibold">⚠️ Documentación observada</p>
+                            <p class="mt-1">El equipo administrativo ha revisado tu documentación y encontró observaciones. Revisa los detalles a continuación.</p>
+                        </div>
+                        <div v-if="validacionDocumental?.observacion" class="rounded-xl border border-slate-200 bg-white p-4 text-sm">
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Observación general</p>
+                            <p class="text-slate-700">{{ validacionDocumental.observacion }}</p>
+                        </div>
+                        <div v-if="observacionesDocumentos.length" class="rounded-xl border border-slate-200 bg-white p-4 text-sm">
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Detalle por documento</p>
+                            <ul class="space-y-2">
+                                <li v-for="(doc, idx) in observacionesDocumentos" :key="idx" class="flex items-start gap-2">
+                                    <span class="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                                        :class="doc.estado === 'rechazado' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'"
+                                    >{{ doc.estado }}</span>
+                                    <span class="text-slate-700"><strong class="capitalize">{{ doc.tipo }}:</strong> {{ doc.observacion }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Sub-estado: Documentos aprobados → Pagar con PayPal -->
+                    <div v-else-if="mostrarPayPal" class="mt-5 space-y-4">
+                        <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+                            <p class="font-semibold">✅ Documentos aprobados</p>
+                            <p class="mt-1">Tu documentación ha sido verificada. Realiza el pago de inscripción para completar tu registro CUP.</p>
+                        </div>
+
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                            <div class="mb-4 flex items-center justify-between">
+                                <p class="text-sm font-bold text-gray-900">Monto a pagar</p>
+                                <p class="text-2xl font-bold text-blue-700">Bs. 200.00</p>
+                            </div>
+                            <PayPalCheckout @pago-exitoso="handlePagoExitoso" />
+                        </div>
+                    </div>
+
+                    <!-- Sub-estado: Pagado / Inscrito -->
+                    <div v-else-if="estaPagado" class="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+                        <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                            <svg class="h-7 w-7 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <p class="text-lg font-bold text-emerald-800">Inscripción confirmada</p>
+                        <p class="mt-1 text-sm text-emerald-600">Tu pago ha sido registrado exitosamente. Revisa la sección de exámenes para más información.</p>
+                    </div>
+
+                    <!-- Sub-estado: Reprobado -->
+                    <div v-else-if="estadoInscripcion === 'reprobado' || academico?.resultado?.estado_final === 'reprobado'" class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        <p class="font-semibold">Gestión reprobada</p>
+                        <p class="mt-1">Debe realizar una repostulación desde la página inicial pública del sistema.</p>
+                    </div>
+
+                    <!-- Sin postulación -->
+                    <div v-else class="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 text-center">
+                        No tienes una postulación activa en este momento.
+                    </div>
+                </div>
+
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm print:border-0 print:shadow-none">
                     <div class="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
                         <div>
@@ -479,60 +573,6 @@ const imprimirBoletaHorario = async () => {
                     </div>
                 </div>
 
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm mt-6">
-                    <h3 class="text-lg font-bold text-blue-950 mb-4">Repostular a Nueva Gestion</h3>
-                    <p class="text-sm text-gray-500 mb-4">
-                        Si participaste en gestiones anteriores y deseas volver a postular en una gestion actual, puedes hacerlo aqui manteniendo tu historial intacto.
-                    </p>
-
-                    <div v-if="cargandoRepostulacion" class="text-sm text-gray-500 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        Verificando gestiones abiertas...
-                    </div>
-                    <div v-else-if="gestionesAbiertas.length === 0" class="text-sm text-yellow-600 bg-yellow-50 p-4 rounded-xl border border-yellow-200">
-                        No hay gestiones de admision abiertas en este momento.
-                    </div>
-                    <form v-else @submit.prevent="repostular" class="space-y-4">
-                        <div v-if="mensajeExito" class="p-3 bg-green-50 text-green-700 rounded text-sm border border-green-200">{{ mensajeExito }}</div>
-                        <div v-if="errorMensaje" class="p-3 bg-red-50 text-red-700 rounded text-sm border border-red-200">{{ errorMensaje }}</div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Seleccionar Gestion Abierta</label>
-                            <select v-model="formRepostulacion.gestion_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                <option value="" disabled>Seleccione una gestion...</option>
-                                <option v-for="gestion in gestionesAbiertas" :key="gestion.id" :value="gestion.id">
-                                    {{ gestion.nombre }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">1ra Opcion de Carrera</label>
-                                <select v-model="formRepostulacion.opcion1_carrera_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                    <option value="" disabled>Seleccione una carrera...</option>
-                                    <option v-for="carrera in carreras" :key="carrera.id" :value="carrera.id">
-                                        {{ carrera.nombre }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">2da Opcion de Carrera</label>
-                                <select v-model="formRepostulacion.opcion2_carrera_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                    <option value="" disabled>Seleccione una carrera...</option>
-                                    <option v-for="carrera in carreras" :key="carrera.id" :value="carrera.id">
-                                        {{ carrera.nombre }}
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end pt-2">
-                            <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
-                                Confirmar Repostulacion
-                            </button>
-                        </div>
-                    </form>
-                </div>
             </div>
         </div>
     </div>

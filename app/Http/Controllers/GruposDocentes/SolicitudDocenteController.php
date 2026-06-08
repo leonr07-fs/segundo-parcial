@@ -10,6 +10,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * CU14 - Gestionar solicitudes docentes
+ * Permite que docentes presenten solicitudes y que administración revise, apruebe, observe o rechace documentos.
+ */
 class SolicitudDocenteController extends Controller
 {
     public function __construct(private readonly SolicitudDocenteService $service)

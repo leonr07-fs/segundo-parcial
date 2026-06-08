@@ -7,6 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Models\EvaluacionesResultados\Evaluacion;
 use Illuminate\Http\Request;
 
+/**
+ * CU10 - Validar reglas académicas
+ * Permite identificar evaluaciones que requieren supervisión académica y consulta de casos pendientes.
+ */
 class ValidacionAcademicaController extends Controller
 {
     /**

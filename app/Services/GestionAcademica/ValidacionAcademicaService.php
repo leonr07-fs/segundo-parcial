@@ -5,6 +5,11 @@ namespace App\Services\GestionAcademica;
 use App\Models\EvaluacionesResultados\Evaluacion;
 use App\Support\States\EvaluacionState;
 
+/**
+ * CU10 - Validar reglas académicas
+ * CU11 - Calcular promedio final y determinar estado
+ * Evalúa notas de exámenes, calcula promedio parcial y determina estados de evaluación.
+ */
 class ValidacionAcademicaService
 {
     /**

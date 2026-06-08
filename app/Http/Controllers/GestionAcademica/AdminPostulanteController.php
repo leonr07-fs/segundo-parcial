@@ -10,6 +10,10 @@ use App\Services\GestionAcademica\AdminPostulanteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * CU05 - Buscar, consultar y actualizar postulante
+ * Permite buscar postulantes, consultar expedientes completos y actualizar datos administrativos.
+ */
 class AdminPostulanteController extends Controller
 {
     public function __construct(private readonly AdminPostulanteService $adminPostulanteService)

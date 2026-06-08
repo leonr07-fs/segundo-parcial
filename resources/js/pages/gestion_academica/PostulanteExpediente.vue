@@ -127,7 +127,7 @@
             <ul v-if="inscripcion.documentos?.length" class="space-y-2 text-sm">
               <li v-for="documento in inscripcion.documentos" :key="documento.id" class="flex items-center justify-between gap-3">
                 <span>{{ labelDocumento(documento.tipo) }}: <strong>{{ documento.estado }}</strong></span>
-                <a v-if="documento.archivo_path" :href="`/storage/${documento.archivo_path}`" target="_blank" rel="noopener" class="text-blue-600 hover:underline">
+                <a v-if="documento.archivo_path" :href="urlDocumentoPostulante(documento.id)" target="_blank" rel="noopener" class="text-blue-600 hover:underline">
                   Ver
                 </a>
               </li>
@@ -170,6 +170,7 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { useToast } from '../../api/toast';
+import { urlDocumentoPostulante } from '../../api/documentos';
 
 const postulante = ref(null);
 const cargando = ref(true);

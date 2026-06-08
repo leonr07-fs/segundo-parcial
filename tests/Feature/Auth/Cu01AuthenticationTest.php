@@ -6,7 +6,9 @@ use App\Models\GestionAcademica\Gestion;
 use App\Models\InscripcionPagos\Inscripcion;
 use App\Models\InscripcionPagos\Postulante;
 use App\Models\Seguridad\User;
+use App\Models\EvaluacionesResultados\ResultadoCup;
 use App\Support\States\GestionState;
+use App\Support\States\InscripcionState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -100,7 +102,7 @@ class Cu01AuthenticationTest extends TestCase
         ]);
     }
 
-    public function test_postulante_no_puede_ingresar_cuando_su_gestion_esta_cerrada(): void
+    public function test_postulante_no_puede_ingresar_si_no_esta_en_gestion_vigente(): void
     {
         $user = User::factory()->create([
             'email' => 'cerrado@cup.test',
@@ -115,6 +117,7 @@ class Cu01AuthenticationTest extends TestCase
             'ci' => '9000999',
         ]);
 
+        Gestion::factory()->create(['estado' => GestionState::INSCRIPCION]);
         Inscripcion::factory()->create([
             'postulante_id' => $postulante->id,
             'gestion_id' => Gestion::factory()->create(['estado' => GestionState::CERRADA])->id,
@@ -127,13 +130,84 @@ class Cu01AuthenticationTest extends TestCase
 
         $response->assertForbidden()
             ->assertJsonPath('ok', false)
-            ->assertJsonPath('message', 'La gestion CUP ya esta cerrada. El acceso del postulante fue deshabilitado para esta gestion.');
+            ->assertJsonPath('message', 'No pertenece a la gestion vigente. Debe realizar una repostulacion desde la pagina inicial.');
 
         $this->assertGuest();
         $this->assertDatabaseHas('audit_logs', [
             'user_id' => $user->id,
-            'event' => 'auth.login.closed_gestion',
+            'event' => 'auth.login.sin_inscripcion_vigente',
         ]);
+    }
+
+    public function test_postulante_puede_ingresar_si_esta_inscrito_en_gestion_vigente(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'activo@cup.test',
+            'numero_registro' => '9000888',
+            'password' => Hash::make('secret123'),
+            'role' => User::ROLE_POSTULANTE,
+            'is_active' => true,
+        ]);
+
+        $postulante = Postulante::factory()->create([
+            'correo' => 'activo@cup.test',
+            'ci' => '9000888',
+        ]);
+
+        $gestionVigente = Gestion::factory()->create(['estado' => GestionState::EN_CURSO]);
+        Inscripcion::factory()->create([
+            'postulante_id' => $postulante->id,
+            'gestion_id' => $gestionVigente->id,
+            'estado' => InscripcionState::INSCRITO,
+        ]);
+
+        $this->postJson('/login', [
+            'numero_registro' => '9000888',
+            'password' => 'secret123',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.redirect_url', '/postulante/dashboard');
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_postulante_reprobado_no_puede_ingresar(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'reprobado@cup.test',
+            'numero_registro' => '9000777',
+            'password' => Hash::make('secret123'),
+            'role' => User::ROLE_POSTULANTE,
+            'is_active' => true,
+        ]);
+
+        $postulante = Postulante::factory()->create([
+            'correo' => 'reprobado@cup.test',
+            'ci' => '9000777',
+        ]);
+
+        $gestionVigente = Gestion::factory()->create(['estado' => GestionState::EN_CURSO]);
+        $inscripcion = Inscripcion::factory()->create([
+            'postulante_id' => $postulante->id,
+            'gestion_id' => $gestionVigente->id,
+            'estado' => InscripcionState::FINALIZADO,
+        ]);
+
+        ResultadoCup::create([
+            'inscripcion_id' => $inscripcion->id,
+            'promedio_final' => 40,
+            'estado_final' => 'reprobado',
+            'cerrado_en' => now(),
+        ]);
+
+        $this->postJson('/login', [
+            'numero_registro' => '9000777',
+            'password' => 'secret123',
+        ])
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Su gestion fue reprobada. Debe realizar una repostulacion desde la pagina inicial.');
+
+        $this->assertGuest();
     }
 
     public function test_repeated_failed_logins_temporarily_lock_the_account(): void

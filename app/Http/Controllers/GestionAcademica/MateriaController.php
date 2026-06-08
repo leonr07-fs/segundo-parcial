@@ -9,6 +9,10 @@ use App\Services\GestionAcademica\ParametrizacionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * CU08 - Parametrizar gestiones, materias, aulas y grupos
+ * Gestiona la configuración de materias disponibles para el proceso académico.
+ */
 class MateriaController extends Controller
 {
     public function __construct(private readonly ParametrizacionService $parametrizacionService)

@@ -9,6 +9,10 @@ use App\Services\PortalPostulante\PostulacionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * CU02 - Registrar postulación CUP
+ * Permite registrar una nueva postulación para la gestión vigente, validando datos, creando postulante e inscripción.
+ */
 class PostulacionController extends Controller
 {
     public function __construct(private readonly PostulacionService $postulacionService)

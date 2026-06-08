@@ -16,6 +16,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
+/**
+ * CU04 - Registrar/verificar pago CUP y confirmar inscripción
+ * Servicio que valida y registra pagos de inscripciones, genera recibos y emite credenciales de postulante.
+ */
 class PagoService
 {
     /**

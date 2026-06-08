@@ -110,6 +110,27 @@ function submitCurrentMode() {
                 >
                     Registrar nueva postulacion
                 </button>
+                <button
+                    type="button"
+                    class="mt-3 rounded-full border border-white/30 bg-white/10 px-6 py-3 text-sm font-bold text-white shadow transition-all hover:bg-white/20"
+                    @click="emit('navigate', '/consulta-postulacion')"
+                >
+                    Consultar estado de postulacion
+                </button>
+                <button
+                    type="button"
+                    class="mt-3 rounded-full border border-indigo-300/40 bg-indigo-500/20 px-6 py-3 text-sm font-bold text-white shadow transition-all hover:bg-indigo-500/30"
+                    @click="emit('navigate', '/repostulacion')"
+                >
+                    Repostulacion
+                </button>
+                <button
+                    type="button"
+                    class="mt-3 rounded-full border border-cyan-300/40 bg-cyan-500/20 px-6 py-3 text-sm font-bold text-white shadow transition-all hover:bg-cyan-500/30"
+                    @click="emit('navigate', '/repostulacion-docente')"
+                >
+                    Repostulacion Docente
+                </button>
             </div>
         </div>
 

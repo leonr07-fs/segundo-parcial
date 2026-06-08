@@ -11,6 +11,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
+/**
+ * CU15 - Registrar asistencia docente
+ * Permite a docentes consultar y registrar asistencia por grupo, materia y fecha.
+ */
 class AsistenciaDocenteController extends Controller
 {
     public function __construct(private readonly AsistenciaDocenteService $asistencias)

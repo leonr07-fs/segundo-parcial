@@ -11,8 +11,8 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
- * CU01: Autenticación de Usuario
- * Controlador para manejar el ingreso y cierre de sesión de todos los usuarios del sistema.
+ * CU01 - Autenticación de usuario
+ * Permite iniciar y cerrar sesión validando credenciales, controlando bloqueos y registrando eventos de acceso.
  */
 class AuthenticatedSessionController extends Controller
 {

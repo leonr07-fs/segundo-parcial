@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import axios from 'axios';
 import { useToast } from '../../api/toast';
+import { urlDocumentoDocente } from '../../api/documentos';
 
 const solicitudes = ref([]);
 const cargando = ref(false);
@@ -10,8 +11,8 @@ const toast = useToast();
 const imagenModalUrl = ref(null);
 
 const documentUrl = (documento) => {
-    if (!documento.archivo_path) return null;
-    return `/storage/${documento.archivo_path}`;
+    if (!documento.archivo_path || !documento.id) return null;
+    return urlDocumentoDocente(documento.id);
 };
 
 const abrirImagen = (url) => {
@@ -107,7 +108,13 @@ onMounted(cargarSolicitudes);
                     <h2 class="text-xl font-bold text-slate-900">Solicitudes Docentes</h2>
                     <p class="mt-1 text-sm text-slate-500">Revise profesion, materia y documentos obligatorios antes de aprobar.</p>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex flex-wrap gap-3">
+                    <a
+                        href="/admin/repostulaciones-docentes"
+                        class="rounded-md border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 hover:bg-cyan-100"
+                    >
+                        Repostulaciones docentes
+                    </a>
                     <select v-model="estadoFiltro" class="rounded-md border border-slate-300 px-3 py-2 text-sm" @change="cargarSolicitudes">
                         <option v-for="estado in estados" :key="estado" :value="estado">{{ estado || 'todos' }}</option>
                     </select>

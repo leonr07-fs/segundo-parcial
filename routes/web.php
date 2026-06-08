@@ -29,8 +29,23 @@ Route::post('/api/postulaciones', [PostulacionController::class, 'store'])->name
 Route::get('/api/solicitudes-docentes/create', [\App\Http\Controllers\GruposDocentes\SolicitudDocenteController::class, 'create'])->name('api.solicitudes-docentes.create');
 Route::post('/api/solicitudes-docentes', [\App\Http\Controllers\GruposDocentes\SolicitudDocenteController::class, 'store'])->name('api.solicitudes-docentes.store');
 
-/* CU06 - Habilitar repostulación en nueva gestión */
-Route::post('/api/postulantes/repostular', [\App\Http\Controllers\PortalPostulante\RepostulacionController::class, 'store'])->middleware('auth')->name('api.postulantes.repostular');
+/* Consulta pública de estado de postulación (sin auth) */
+Route::view('/consulta-postulacion', 'app')->name('consulta-postulacion');
+Route::get('/api/consulta-postulacion/{ci}', [\App\Http\Controllers\PortalPostulante\ConsultaPostulacionController::class, 'consultar'])->name('api.consulta-postulacion');
+Route::post('/api/public/paypal/create-order', [\App\Http\Controllers\PortalPostulante\ConsultaPostulacionController::class, 'createOrder'])->name('api.public.paypal.create-order');
+Route::post('/api/public/paypal/capture-order', [\App\Http\Controllers\PortalPostulante\ConsultaPostulacionController::class, 'captureOrder'])->name('api.public.paypal.capture-order');
+
+
+/* CU06 - Repostulación pública (sin auth) */
+Route::view('/repostulacion', 'app')->name('repostulacion');
+Route::post('/api/public/repostulacion/validar', [\App\Http\Controllers\PortalPostulante\RepostulacionPublicaController::class, 'validar'])->name('api.public.repostulacion.validar');
+Route::post('/api/public/repostulacion/preparar', [\App\Http\Controllers\PortalPostulante\RepostulacionPublicaController::class, 'preparar'])->name('api.public.repostulacion.preparar');
+Route::post('/api/public/repostulacion/paypal/create-order', [\App\Http\Controllers\PortalPostulante\RepostulacionPublicaController::class, 'createOrder'])->name('api.public.repostulacion.paypal.create-order');
+Route::post('/api/public/repostulacion/paypal/capture-order', [\App\Http\Controllers\PortalPostulante\RepostulacionPublicaController::class, 'captureOrder'])->name('api.public.repostulacion.paypal.capture-order');
+
+/* Repostulación docente pública */
+Route::view('/repostulacion-docente', 'app')->name('repostulacion-docente');
+Route::post('/api/public/repostulacion-docente', [\App\Http\Controllers\GruposDocentes\RepostulacionDocentePublicaController::class, 'store'])->name('api.public.repostulacion-docente.store');
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::view('/admin/bitacora', 'app')->name('admin.bitacora');
@@ -41,6 +56,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/api/admin/solicitudes-docentes/{solicitud}/aprobar', [\App\Http\Controllers\GruposDocentes\SolicitudDocenteController::class, 'aprobar'])->name('api.admin.solicitudes-docentes.aprobar');
     Route::post('/api/admin/solicitudes-docentes/{solicitud}/observar', [\App\Http\Controllers\GruposDocentes\SolicitudDocenteController::class, 'observar'])->name('api.admin.solicitudes-docentes.observar');
     Route::post('/api/admin/solicitudes-docentes/{solicitud}/rechazar', [\App\Http\Controllers\GruposDocentes\SolicitudDocenteController::class, 'rechazar'])->name('api.admin.solicitudes-docentes.rechazar');
+    Route::view('/admin/repostulaciones-docentes', 'app')->name('admin.repostulaciones-docentes');
+    Route::get('/api/admin/repostulaciones-docentes', [\App\Http\Controllers\GruposDocentes\RepostulacionDocenteAdminController::class, 'index'])->name('api.admin.repostulaciones-docentes.index');
+    Route::post('/api/admin/repostulaciones-docentes/{repostulacion}/aprobar', [\App\Http\Controllers\GruposDocentes\RepostulacionDocenteAdminController::class, 'aprobar'])->name('api.admin.repostulaciones-docentes.aprobar');
+    Route::post('/api/admin/repostulaciones-docentes/{repostulacion}/rechazar', [\App\Http\Controllers\GruposDocentes\RepostulacionDocenteAdminController::class, 'rechazar'])->name('api.admin.repostulaciones-docentes.rechazar');
 });
 
 Route::middleware(['auth', 'role:admin,autoridad,coordinador'])->group(function () {
@@ -97,6 +116,8 @@ Route::middleware(['auth', 'role:admin,autoridad,coordinador'])->group(function 
     Route::get('/api/inscripciones/pendientes-validacion', [\App\Http\Controllers\PortalPostulante\ValidacionDocumentalController::class, 'index'])->name('api.validacion-documental.index');
     Route::get('/api/inscripciones/{id}/documentos', [\App\Http\Controllers\PortalPostulante\ValidacionDocumentalController::class, 'show'])->name('api.validacion-documental.show');
     Route::post('/api/inscripciones/{id}/documentos/validar', [\App\Http\Controllers\PortalPostulante\ValidacionDocumentalController::class, 'store'])->middleware('role:admin')->name('api.validacion-documental.store');
+    Route::get('/api/documentos-postulante/{documento}/archivo', [\App\Http\Controllers\Documentos\DocumentoArchivoController::class, 'postulante'])->name('api.documentos.postulante.archivo');
+    Route::get('/api/documentos-docentes/{documento}/archivo', [\App\Http\Controllers\Documentos\DocumentoArchivoController::class, 'docente'])->name('api.documentos.docente.archivo');
 
     /* CU04 - Registrar Pago */
     Route::view('/admin/pagos', 'app')->name('admin.pagos');
@@ -128,3 +149,13 @@ Route::get('/api/docente/asistencias/{grupoMateriaId}', [\App\Http\Controllers\G
 Route::post('/api/docente/asistencias/{grupoMateriaId}', [\App\Http\Controllers\GruposDocentes\AsistenciaDocenteController::class, 'store'])->middleware(['auth', 'role:docente'])->name('api.docente.asistencias.store');
 Route::get('/api/admin/asistencias', [\App\Http\Controllers\GruposDocentes\AsistenciaDocenteController::class, 'index'])->middleware(['auth', 'role:admin,autoridad,coordinador'])->name('api.admin.asistencias.index');
 Route::get('/api/postulante/academico', [DashboardController::class, 'postulante'])->middleware(['auth', 'role:postulante'])->name('api.postulante.academico');
+
+/* Integración PayPal */
+Route::post('/api/pagos/paypal/create-order', [\App\Http\Controllers\PortalPostulante\PayPalController::class, 'createOrder'])->middleware(['auth', 'role:postulante'])->name('api.paypal.create-order');
+Route::post('/api/pagos/paypal/capture-order', [\App\Http\Controllers\PortalPostulante\PayPalController::class, 'captureOrder'])->middleware(['auth', 'role:postulante'])->name('api.paypal.capture-order');
+
+/* Webhook (sin Auth) pero validado criptográficamente o excluído de CSRF */
+// NOTA: Como todo está en web.php con middleware web por defecto, el webhook necesita estar fuera de VerifyCsrfToken.
+// Por lo tanto, agregaremos el route. O lo ideal sería configurar VerifyCsrfToken.php.
+Route::post('/api/webhooks/paypal', [\App\Http\Controllers\PortalPostulante\PayPalController::class, 'webhook'])->name('api.paypal.webhook');
+

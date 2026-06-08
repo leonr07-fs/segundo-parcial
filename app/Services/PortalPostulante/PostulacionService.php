@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * CU02 - Registrar postulación CUP
+ * Servicio que procesa la creación de postulantes, opciones de carrera y la inscripción en la gestión vigente.
+ */
 class PostulacionService
 {
     public function __construct(

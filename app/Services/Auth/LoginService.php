@@ -2,10 +2,11 @@
 
 namespace App\Services\Auth;
 
+use App\Models\GestionAcademica\Docente;
 use App\Models\InscripcionPagos\Postulante;
 use App\Models\Seguridad\User;
+use App\Services\GestionAcademica\GestionVigenteService;
 use App\Services\SeguridadUsuarios\AuditLogService;
-use App\Support\States\GestionState;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -21,8 +22,10 @@ class LoginService
     private const MAX_FAILED_ATTEMPTS = 5;
     private const LOCK_MINUTES = 15;
 
-    public function __construct(private readonly AuditLogService $auditLogService)
-    {
+    public function __construct(
+        private readonly AuditLogService $auditLogService,
+        private readonly GestionVigenteService $gestionVigenteService,
+    ) {
     }
 
     /**
@@ -56,6 +59,7 @@ class LoginService
         }
 
         $this->ensurePostulanteGestionAccesible($user, $request);
+        $this->ensureDocenteGestionAccesible($user, $request);
 
         Auth::login($user);
         $request->session()->regenerate();
@@ -163,22 +167,76 @@ class LoginService
         $postulante = Postulante::query()
             ->where('correo', $user->email)
             ->orWhere('ci', $user->numero_registro)
-            ->with(['inscripciones' => function ($query) {
-                $query->with('gestion')->latest('created_at')->limit(1);
-            }])
             ->first();
 
-        $gestion = $postulante?->inscripciones->first()?->gestion;
+        if ($postulante === null) {
+            $this->auditLogService->record('auth.login.no_postulante', $user, $request);
 
-        if ($gestion?->estado !== GestionState::CERRADA) {
+            throw new HttpException(
+                403,
+                'No pertenece a la gestion vigente. Debe realizar una repostulacion desde la pagina inicial.'
+            );
+        }
+
+        $gestionVigente = $this->gestionVigenteService->actual();
+        $inscripcionVigente = $this->gestionVigenteService->inscripcionEnGestionVigente($postulante, $gestionVigente);
+
+        if ($inscripcionVigente === null) {
+            $this->auditLogService->record('auth.login.sin_inscripcion_vigente', $user, $request, [
+                'gestion_vigente_id' => $gestionVigente?->id,
+                'gestion_vigente' => $gestionVigente?->nombre,
+            ]);
+
+            throw new HttpException(
+                403,
+                'No pertenece a la gestion vigente. Debe realizar una repostulacion desde la pagina inicial.'
+            );
+        }
+
+        if ($inscripcionVigente->resultadoCup?->estado_final === 'reprobado') {
+            $this->auditLogService->record('auth.login.reprobado', $user, $request, [
+                'inscripcion_id' => $inscripcionVigente->id,
+            ]);
+
+            throw new HttpException(
+                403,
+                'Su gestion fue reprobada. Debe realizar una repostulacion desde la pagina inicial.'
+            );
+        }
+    }
+
+    private function ensureDocenteGestionAccesible(User $user, Request $request): void
+    {
+        if ($user->role !== User::ROLE_DOCENTE) {
             return;
         }
 
-        $this->auditLogService->record('auth.login.closed_gestion', $user, $request, [
-            'gestion_id' => $gestion->id,
-            'gestion' => $gestion->nombre,
-        ]);
+        $docente = Docente::query()
+            ->where('correo', $user->email)
+            ->orWhere('ci', $user->numero_registro)
+            ->first();
 
-        throw new HttpException(403, 'La gestion CUP ya esta cerrada. El acceso del postulante fue deshabilitado para esta gestion.');
+        if ($docente === null) {
+            $this->auditLogService->record('auth.login.no_docente', $user, $request);
+
+            throw new HttpException(
+                403,
+                'No pertenece a la gestion vigente. Debe realizar una repostulacion docente desde la pagina inicial.'
+            );
+        }
+
+        if (! $this->gestionVigenteService->docentePuedeAcceder($docente)) {
+            $gestionVigente = $this->gestionVigenteService->actual();
+
+            $this->auditLogService->record('auth.login.docente_sin_gestion_vigente', $user, $request, [
+                'docente_id' => $docente->id,
+                'gestion_vigente_id' => $gestionVigente?->id,
+            ]);
+
+            throw new HttpException(
+                403,
+                'No pertenece a la gestion vigente. Debe realizar una repostulacion docente desde la pagina inicial.'
+            );
+        }
     }
 }

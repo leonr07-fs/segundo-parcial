@@ -8,6 +8,10 @@ use App\Http\Requests\ValidarDocumentosRequest;
 use App\Services\PortalPostulante\ValidacionDocumentalService;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * CU03 - Validar requisitos documentales
+ * Permite revisar y aprobar u observar documentos presentados en la inscripción CUP.
+ */
 class ValidacionDocumentalController extends Controller
 {
     public function __construct(private readonly ValidacionDocumentalService $validacionService)

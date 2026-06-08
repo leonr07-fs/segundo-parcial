@@ -13,6 +13,7 @@ final class InscripcionState
     public const PREPOSTULADO = 'prepostulado';
     public const DOCUMENTOS_PENDIENTES = 'documentos_pendientes';
     public const DOCUMENTOS_APROBADOS = 'documentos_aprobados';
+    public const DOCUMENTOS_RECHAZADOS = 'documentos_rechazados';
     public const PAGADO = 'pagado';
     public const INSCRITO = 'inscrito';
     public const EN_CURSO = 'en_curso';
@@ -23,6 +24,7 @@ final class InscripcionState
         self::PREPOSTULADO,
         self::DOCUMENTOS_PENDIENTES,
         self::DOCUMENTOS_APROBADOS,
+        self::DOCUMENTOS_RECHAZADOS,
         self::PAGADO,
         self::INSCRITO,
         self::EN_CURSO,
