@@ -78,7 +78,11 @@ class RepostulacionDocenteService
 
     public function listar(array $filtros = [])
     {
+        $gestionVigente = $this->gestionVigenteService->actual();
+
         return RepostulacionDocente::with(['docente', 'gestion', 'revisadoPor'])
+            ->when($gestionVigente, fn ($query) => $query->where('gestion_id', $gestionVigente->id))
+            ->when(!$gestionVigente, fn ($query) => $query->whereRaw('1 = 0'))
             ->when($filtros['estado'] ?? null, fn ($query, $estado) => $query->where('estado', $estado))
             ->latest('id')
             ->paginate(25);

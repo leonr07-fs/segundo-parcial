@@ -89,7 +89,7 @@ class ReportesTest extends TestCase
     public function test_reporte_dinamico_respeta_columnas_y_filtro_de_gestion(): void
     {
         $gestionVigente = Gestion::factory()->create(['nombre' => 'Semestre 1 2026']);
-        $gestionAnterior = Gestion::factory()->create(['nombre' => 'Semestre 2 2025']);
+        $gestionAnterior = Gestion::factory()->create(['nombre' => 'Semestre 2 2025', 'estado' => \App\Support\States\GestionState::CERRADA]);
 
         $this->crearInscripcionConPostulante($gestionVigente, 'CUP-2026-00003', '333333');
         $this->crearInscripcionConPostulante($gestionAnterior, 'CUP-2025-00004', '444444');

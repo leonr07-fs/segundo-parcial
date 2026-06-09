@@ -13,7 +13,7 @@ class EvaluacionEstrictaTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_estudiante_reprueba_si_nota_es_menor_a_51()
+    public function test_estudiante_no_reprueba_inmediatamente_si_examen_1_es_menor_a_60()
     {
         $eval = new Evaluacion([
             'examen_1' => 50,
@@ -23,10 +23,10 @@ class EvaluacionEstrictaTest extends TestCase
         $service = new ValidacionAcademicaService();
         $service->validar($eval, false);
 
-        $this->assertEquals(EvaluacionState::REPROBADO, $eval->estado);
+        $this->assertEquals(EvaluacionState::INCOMPLETO, $eval->estado);
     }
 
-    public function test_estudiante_reprobado_lanza_excepcion_si_intenta_subir_mas_notas()
+    public function test_estudiante_con_examen_1_menor_a_60_no_lanza_excepcion_si_tiene_examen_2()
     {
         $eval = new Evaluacion([
             'examen_1' => 40,
@@ -35,10 +35,9 @@ class EvaluacionEstrictaTest extends TestCase
         ]);
 
         $service = new ValidacionAcademicaService();
-        
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('El estudiante reprobó el Examen 1 con 40.00. No está habilitado para registrar más notas.');
-        
         $service->validar($eval, false);
+
+        $this->assertEquals(EvaluacionState::INCOMPLETO, $eval->estado);
+        $this->assertEquals('Falta el Examen 3.', $eval->observacion);
     }
 }

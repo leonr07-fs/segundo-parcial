@@ -9,16 +9,23 @@ const emit = defineEmits(['navigate']);
 const loading = ref(true);
 const inscripciones = ref([]);
 const serverMessage = ref('');
+const estadoFiltro = ref('pendientes');
 
-onMounted(async () => {
+async function cargarBandeja() {
+    loading.value = true;
+    serverMessage.value = '';
     try {
-        const payload = await fetchInscripcionesPendientes();
+        const payload = await fetchInscripcionesPendientes(estadoFiltro.value);
         inscripciones.value = payload.data.inscripciones;
     } catch (error) {
-        serverMessage.value = 'Error al cargar la lista de inscripciones pendientes.';
+        serverMessage.value = 'Error al cargar la lista de inscripciones.';
     } finally {
         loading.value = false;
     }
+}
+
+onMounted(async () => {
+    await cargarBandeja();
 });
 
 function verDetalle(id) {
@@ -49,10 +56,21 @@ function resumenPrevalidacion(inscripcion) {
 
 <template>
     <div>
-        <header class="mb-6 flex items-center justify-between">
+        <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">Validacion Documental</h1>
                 <p class="mt-1 text-sm text-slate-500">Gestion y revision de requisitos documentales de los postulantes.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <select v-model="estadoFiltro" class="rounded-md border border-slate-300 px-3 py-2 text-sm bg-white" @change="cargarBandeja">
+                    <option value="pendientes">Pendientes</option>
+                    <option value="aprobados">Aprobados</option>
+                    <option value="rechazados">Rechazados</option>
+                    <option value="todos">Todos</option>
+                </select>
+                <button class="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800" @click="cargarBandeja">
+                    Actualizar
+                </button>
             </div>
         </header>
 
@@ -106,8 +124,17 @@ function resumenPrevalidacion(inscripcion) {
                             <span v-if="ins.estado === 'prepostulado'" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
                                 Pre-postulado
                             </span>
-                            <span v-else-if="ins.estado === 'documentos_pendientes'" class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                            <span v-else-if="ins.estado === 'documentos_pendientes'" class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                                 Docs. Observados
+                            </span>
+                            <span v-else-if="['documentos_aprobados', 'pagado', 'inscrito', 'en_curso', 'finalizado'].includes(ins.estado)" class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                                Aprobado
+                            </span>
+                            <span v-else-if="ins.estado === 'documentos_rechazados'" class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                Rechazado
+                            </span>
+                            <span v-else class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
+                                {{ ins.estado }}
                             </span>
                         </td>
                         <td class="whitespace-nowrap px-6 py-4 text-right">
@@ -115,7 +142,7 @@ function resumenPrevalidacion(inscripcion) {
                                 @click="verDetalle(ins.id)"
                                 class="inline-flex items-center text-sm font-semibold text-cyan-600 transition hover:text-cyan-800"
                             >
-                                Validar
+                                {{ ['prepostulado', 'documentos_pendientes'].includes(ins.estado) ? 'Validar' : 'Ver' }}
                             </button>
                         </td>
                     </tr>

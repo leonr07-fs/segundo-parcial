@@ -66,7 +66,7 @@ class Cu12AsignacionCarreraTest extends TestCase
 
     public function test_asigna_primera_opcion_y_descuenta_cupo(): void
     {
-        $gestion = Gestion::factory()->create(['estado' => 'activa']);
+        $gestion = Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
         $carreraSistemas = Carrera::factory()->create(['codigo' => 'SIS']);
         $carreraRedes = Carrera::factory()->create(['codigo' => 'RED']);
 
@@ -100,7 +100,7 @@ class Cu12AsignacionCarreraTest extends TestCase
     public function test_admin_configura_cupos_por_carrera_para_la_gestion_activa(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $gestion = Gestion::factory()->create(['estado' => 'activa']);
+        $gestion = Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
         $sistemas = Carrera::factory()->create(['codigo' => 'SIS', 'nombre' => 'Ingenieria en Sistemas']);
         $informatica = Carrera::factory()->create(['codigo' => 'INF', 'nombre' => 'Informatica']);
 
@@ -128,35 +128,28 @@ class Cu12AsignacionCarreraTest extends TestCase
     public function test_admin_configura_cupos_para_la_gestion_solicitada_sin_mezclar_otras_gestiones(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $gestionActual = Gestion::factory()->create(['estado' => 'activa']);
-        $gestionAnterior = Gestion::factory()->create(['estado' => 'inhabilitada']);
+        $gestionActual = Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
+        $gestionAnterior = Gestion::factory()->create(['estado' => \App\Support\States\GestionState::CERRADA]);
         $sistemas = Carrera::factory()->create(['codigo' => 'SIS', 'nombre' => 'Ingenieria en Sistemas']);
 
         CupoCarrera::create([
-            'gestion_id' => $gestionActual->id,
+            'gestion_id' => $gestionAnterior->id,
             'carrera_id' => $sistemas->id,
-            'cupo_total' => 300,
-            'cupo_disponible' => 300,
+            'cupo_total' => 120,
+            'cupo_disponible' => 120,
         ]);
 
         $response = $this->actingAs($admin)->putJson('/api/asignaciones-carrera/cupos', [
-            'gestion_id' => $gestionAnterior->id,
+            'gestion_id' => $gestionActual->id,
             'cupos' => [
-                ['carrera_id' => $sistemas->id, 'cupo_total' => 120],
+                ['carrera_id' => $sistemas->id, 'cupo_total' => 300],
             ],
         ]);
 
         $response->assertOk()
             ->assertJsonPath('ok', true)
-            ->assertJsonPath('data.cupos.0.gestion_id', $gestionAnterior->id)
-            ->assertJsonPath('data.cupos.0.cupo_total', 120);
-
-        $this->assertDatabaseHas('cupos_carrera', [
-            'gestion_id' => $gestionActual->id,
-            'carrera_id' => $sistemas->id,
-            'cupo_total' => 300,
-            'cupo_disponible' => 300,
-        ]);
+            ->assertJsonPath('data.cupos.0.gestion_id', $gestionActual->id)
+            ->assertJsonPath('data.cupos.0.cupo_total', 300);
 
         $this->assertDatabaseHas('cupos_carrera', [
             'gestion_id' => $gestionAnterior->id,
@@ -164,11 +157,18 @@ class Cu12AsignacionCarreraTest extends TestCase
             'cupo_total' => 120,
             'cupo_disponible' => 120,
         ]);
+
+        $this->assertDatabaseHas('cupos_carrera', [
+            'gestion_id' => $gestionActual->id,
+            'carrera_id' => $sistemas->id,
+            'cupo_total' => 300,
+            'cupo_disponible' => 300,
+        ]);
     }
 
     public function test_asigna_segunda_opcion_si_primera_agotada(): void
     {
-        $gestion = Gestion::factory()->create(['estado' => 'activa']);
+        $gestion = Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
         $carreraSistemas = Carrera::factory()->create();
         $carreraRedes = Carrera::factory()->create();
 
@@ -203,7 +203,7 @@ class Cu12AsignacionCarreraTest extends TestCase
 
     public function test_estudiante_queda_sin_cupo_si_ambas_opciones_estan_llenas(): void
     {
-        $gestion = Gestion::factory()->create(['estado' => 'activa']);
+        $gestion = Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
         $carreraSistemas = Carrera::factory()->create();
         $carreraRedes = Carrera::factory()->create();
 

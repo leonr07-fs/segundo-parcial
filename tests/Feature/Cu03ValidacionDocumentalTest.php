@@ -47,9 +47,10 @@ class Cu03ValidacionDocumentalTest extends TestCase
 
     public function test_admin_puede_ver_inscripciones_pendientes_de_validacion(): void
     {
-        Inscripcion::factory()->count(2)->create(['estado' => InscripcionState::PREPOSTULADO]);
-        Inscripcion::factory()->count(1)->create(['estado' => InscripcionState::DOCUMENTOS_PENDIENTES]);
-        Inscripcion::factory()->count(3)->create(['estado' => InscripcionState::DOCUMENTOS_APROBADOS]); // No debe salir
+        $gestion = \App\Models\GestionAcademica\Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
+        Inscripcion::factory()->count(2)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::PREPOSTULADO]);
+        Inscripcion::factory()->count(1)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::DOCUMENTOS_PENDIENTES]);
+        Inscripcion::factory()->count(3)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::DOCUMENTOS_APROBADOS]); // No debe salir
 
         $response = $this->actingAs($this->admin)
             ->getJson('/api/inscripciones/pendientes-validacion');
@@ -57,6 +58,34 @@ class Cu03ValidacionDocumentalTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('ok', true)
             ->assertJsonCount(3, 'data.inscripciones');
+    }
+
+    public function test_admin_puede_ver_inscripciones_aprobadas_de_validacion(): void
+    {
+        $gestion = \App\Models\GestionAcademica\Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
+        Inscripcion::factory()->count(2)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::PREPOSTULADO]);
+        Inscripcion::factory()->count(3)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::DOCUMENTOS_APROBADOS]); 
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/inscripciones/pendientes-validacion?estado=aprobados');
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(3, 'data.inscripciones');
+    }
+
+    public function test_admin_puede_ver_todas_las_inscripciones_de_validacion(): void
+    {
+        $gestion = \App\Models\GestionAcademica\Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
+        Inscripcion::factory()->count(2)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::PREPOSTULADO]);
+        Inscripcion::factory()->count(3)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::DOCUMENTOS_APROBADOS]); 
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/inscripciones/pendientes-validacion?estado=todos');
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(5, 'data.inscripciones');
     }
 
     /* ================================================================== */

@@ -19,11 +19,12 @@ class PagoController extends Controller
     }
 
     /**
-     * Listar inscripciones habilitadas para pago.
+     * Listar inscripciones de pago filtradas por estado.
      */
-    public function index(): JsonResponse
+    public function index(\Illuminate\Http\Request $request): JsonResponse
     {
-        $inscripciones = $this->pagoService->listarPendientesPago();
+        $estado = $request->query('estado', 'pendientes');
+        $inscripciones = $this->pagoService->listarPagosConFiltro($estado);
 
         return response()->json([
             'ok' => true,
@@ -60,6 +61,26 @@ class PagoController extends Controller
                 'ok' => false,
                 'message' => 'Ocurrió un error interno al registrar el pago.',
             ], 500);
+        }
+    }
+
+    /**
+     * Retorna los detalles de un pago registrado.
+     */
+    public function show(int $id): JsonResponse
+    {
+        try {
+            $resultado = $this->pagoService->obtenerDetallesPago($id);
+
+            return response()->json([
+                'ok' => true,
+                'data' => $resultado,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No se pudo cargar el detalle del pago.',
+            ], 404);
         }
     }
 }

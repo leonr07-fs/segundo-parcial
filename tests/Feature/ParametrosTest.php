@@ -65,7 +65,6 @@ class ParametrosTest extends TestCase
     public function test_admin_puede_crear_gestion_planificada(): void
     {
         $payload = [
-            'nombre' => 'Semestre 2-2027',
             'anio' => 2027,
             'periodo' => '2',
         ];
@@ -74,10 +73,11 @@ class ParametrosTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.gestion.nombre', 'Semestre 2 2027')
             ->assertJsonPath('data.gestion.estado', GestionState::PLANIFICADA);
 
         $this->assertDatabaseHas('gestiones', [
-            'nombre' => 'Semestre 2-2027',
+            'nombre' => 'Semestre 2 2027',
             'anio' => 2027,
             'periodo' => '2',
             'estado' => GestionState::PLANIFICADA,
@@ -99,7 +99,7 @@ class ParametrosTest extends TestCase
         ]);
         $this->assertDatabaseHas('gestiones', [
             'id' => $anterior->id,
-            'estado' => GestionState::INHABILITADA,
+            'estado' => GestionState::CERRADA,
         ]);
     }
 

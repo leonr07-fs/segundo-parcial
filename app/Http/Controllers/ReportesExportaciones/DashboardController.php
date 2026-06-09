@@ -31,20 +31,32 @@ class DashboardController extends Controller
 
     public function admin(): JsonResponse
     {
-        $gestionActiva = Gestion::where('estado', GestionState::INSCRIPCION)
-            ->latest('id')
-            ->first();
+        $gestionActiva = $this->gestionVigenteService->actual();
+        $gestionId = $gestionActiva?->id;
+
+        $inscripcionesVigentes = Inscripcion::query()
+            ->when($gestionId, fn ($query) => $query->where('gestion_id', $gestionId))
+            ->when(! $gestionId, fn ($query) => $query->whereRaw('1 = 0'));
+
+        $evaluacionesVigentes = Evaluacion::query()
+            ->whereHas('inscripcion', fn ($query) => $gestionId
+                ? $query->where('gestion_id', $gestionId)
+                : $query->whereRaw('1 = 0'));
 
         return response()->json([
             'ok' => true,
             'data' => [
                 'gestion_activa' => $gestionActiva,
                 'resumen' => [
-                    'postulantes' => Postulante::count(),
-                    'inscripciones' => Inscripcion::count(),
-                    'evaluaciones' => Evaluacion::count(),
-                    'asignaciones_carrera' => AsignacionCarrera::count(),
-                    'evaluaciones_pendientes' => Evaluacion::whereIn('estado', ['pendiente', 'incompleto', 'observado'])->count(),
+                    'postulantes' => (clone $inscripcionesVigentes)->distinct('postulante_id')->count('postulante_id'),
+                    'inscripciones' => (clone $inscripcionesVigentes)->count(),
+                    'evaluaciones' => (clone $evaluacionesVigentes)->count(),
+                    'asignaciones_carrera' => AsignacionCarrera::whereHas('inscripcion', fn ($query) => $gestionId
+                        ? $query->where('gestion_id', $gestionId)
+                        : $query->whereRaw('1 = 0'))->count(),
+                    'evaluaciones_pendientes' => (clone $evaluacionesVigentes)
+                        ->whereIn('estado', ['pendiente', 'incompleto', 'observado'])
+                        ->count(),
                 ],
             ],
         ]);
@@ -78,6 +90,7 @@ class DashboardController extends Controller
 
         $carga = GrupoMateria::with(['materia', 'grupo.gestion', 'grupo.aula', 'horarios.aula'])
             ->where('docente_id', $docente->id)
+            ->whereHas('grupo', fn ($query) => $query->where('gestion_id', $this->gestionVigenteService->actual()?->id ?? 0))
             ->orderBy('grupo_id')
             ->get()
             ->map(fn (GrupoMateria $grupoMateria) => [

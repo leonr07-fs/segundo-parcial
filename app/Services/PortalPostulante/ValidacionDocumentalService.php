@@ -4,6 +4,7 @@ namespace App\Services\PortalPostulante;
 
 use App\Services\GestionAcademica\CredentialService;
 
+use App\Services\GestionAcademica\GestionVigenteService;
 use App\Services\SeguridadUsuarios\AuditLogService;
 
 use App\Models\InscripcionPagos\Documento;
@@ -25,6 +26,7 @@ class ValidacionDocumentalService
         private readonly AuditLogService $auditLogService,
         private readonly PrevalidacionDocumentalService $prevalidacionDocumentalService,
         private readonly CredentialService $credentialService,
+        private readonly GestionVigenteService $gestionVigenteService,
     )
     {
     }
@@ -37,13 +39,46 @@ class ValidacionDocumentalService
      */
     public function listarPendientes(): Collection
     {
-        return Inscripcion::with(['postulante', 'gestion', 'documentos'])
-            ->whereIn('estado', [
+        return $this->listarConFiltro('pendientes');
+    }
+
+    /**
+     * Lista de inscripciones de validación documental filtradas por estado.
+     *
+     * @param string|null $estado
+     * @return Collection<int, Inscripcion>
+     */
+    public function listarConFiltro(?string $estado = 'pendientes'): Collection
+    {
+        $gestionVigente = $this->gestionVigenteService->actual();
+
+        $query = Inscripcion::with(['postulante', 'gestion', 'documentos', 'validacionDocumental'])
+            ->when($gestionVigente, fn ($query) => $query->where('gestion_id', $gestionVigente->id))
+            ->when(! $gestionVigente, fn ($query) => $query->whereRaw('1 = 0'));
+
+        if ($estado === 'pendientes') {
+            $query->whereIn('estado', [
                 InscripcionState::PREPOSTULADO,
                 InscripcionState::DOCUMENTOS_PENDIENTES,
-            ])
-            ->orderBy('fecha_inscripcion', 'asc')
-            ->get();
+            ]);
+        } elseif ($estado === 'aprobados') {
+            $query->where(function ($q) {
+                $q->whereIn('estado', [
+                    InscripcionState::DOCUMENTOS_APROBADOS,
+                    InscripcionState::PAGADO,
+                    InscripcionState::INSCRITO,
+                    InscripcionState::EN_CURSO,
+                    InscripcionState::FINALIZADO,
+                ])->orWhereHas('validacionDocumental', fn ($vq) => $vq->where('estado', 'aprobada'));
+            });
+        } elseif ($estado === 'rechazados') {
+            $query->where(function ($q) {
+                $q->where('estado', InscripcionState::DOCUMENTOS_RECHAZADOS)
+                  ->orWhereHas('validacionDocumental', fn ($vq) => $vq->where('estado', 'rechazada'));
+            });
+        }
+
+        return $query->orderBy('fecha_inscripcion', 'asc')->get();
     }
 
     /**
@@ -98,6 +133,10 @@ class ValidacionDocumentalService
     {
         $inscripcion = Inscripcion::findOrFail($inscripcionId);
         $user = $request->user();
+
+        if ($inscripcion->gestion_id !== $this->gestionVigenteService->actual()?->id) {
+            throw new \DomainException('La inscripcion no pertenece a la gestion vigente.');
+        }
 
         if ($user === null || $user->role !== 'admin') {
             throw new \DomainException('No tiene permisos para realizar esta acción.');
@@ -158,6 +197,8 @@ class ValidacionDocumentalService
                 $nuevoEstadoInscripcion = InscripcionState::DOCUMENTOS_APROBADOS;
             } elseif ($estadoValidacion === ValidacionDocumentalState::OBSERVADA) {
                 $nuevoEstadoInscripcion = InscripcionState::DOCUMENTOS_PENDIENTES;
+            } elseif ($estadoValidacion === ValidacionDocumentalState::RECHAZADA) {
+                $nuevoEstadoInscripcion = InscripcionState::DOCUMENTOS_RECHAZADOS;
             }
 
             if ($nuevoEstadoInscripcion !== $inscripcion->estado) {

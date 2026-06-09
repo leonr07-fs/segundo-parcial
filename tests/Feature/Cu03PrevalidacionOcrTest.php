@@ -27,7 +27,7 @@ class Cu03PrevalidacionOcrTest extends TestCase
     /**
      * Test 1: Auto-aprobación exitosa cuando los documentos están al 100% correctos.
      */
-    public function test_ocr_auto_aprueba_inscripcion_cuando_todo_coincide(): void
+    public function test_ocr_no_auto_aprueba_inscripcion_cuando_todo_coincide_y_requiere_revision_manual(): void
     {
         // Creamos un postulante normal (sin triggers de error/duda)
         $postulante = Postulante::factory()->create([
@@ -70,28 +70,26 @@ class Cu03PrevalidacionOcrTest extends TestCase
         $this->assertEquals(0, $resultado['observados']);
         $this->assertEquals(2, $resultado['ok']);
 
-        // Verificamos que los documentos se hayan auto-aprobado
+        // Verificamos que los documentos permanezcan en estado PENDIENTE esperando revisión manual
         $this->assertDatabaseHas('documentos', [
             'id' => $docCi->id,
-            'estado' => DocumentoState::APROBADO,
+            'estado' => DocumentoState::PENDIENTE,
         ]);
 
         $this->assertDatabaseHas('documentos', [
             'id' => $docLibreta->id,
-            'estado' => DocumentoState::APROBADO,
+            'estado' => DocumentoState::PENDIENTE,
         ]);
 
-        // Verificamos que la validación documental global esté APROBADA
-        $this->assertDatabaseHas('validaciones_documentales', [
+        // Verificamos que NO se haya creado una validación documental aprobada por el sistema
+        $this->assertDatabaseMissing('validaciones_documentales', [
             'inscripcion_id' => $inscripcion->id,
-            'estado' => ValidacionDocumentalState::APROBADA,
-            'validado_por' => null, // Aprobación por sistema (IA/OCR)
         ]);
 
-        // Verificamos que la inscripción pase directamente a documentos_aprobados
+        // Verificamos que la inscripción siga en estado PREPOSTULADO esperando revisión manual
         $this->assertDatabaseHas('inscripciones', [
             'id' => $inscripcion->id,
-            'estado' => InscripcionState::DOCUMENTOS_APROBADOS,
+            'estado' => InscripcionState::PREPOSTULADO,
         ]);
     }
 

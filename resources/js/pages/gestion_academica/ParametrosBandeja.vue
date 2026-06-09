@@ -27,18 +27,22 @@
     <div v-if="activeTab === 'Gestiones'" class="space-y-6">
       <div class="bg-white p-6 rounded shadow">
         <h2 class="text-lg font-semibold text-gray-700 mb-4">Añadir Nueva Gestión</h2>
-        <form @submit.prevent="crearGestion" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <form @submit.prevent="crearGestion" class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700">Nombre</label>
-            <input v-model="formGestion.nombre" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="Semestre 1-2026">
+            <label class="block text-sm font-medium text-gray-700">Nombre generado</label>
+            <input :value="nombreGestionPreview" disabled class="mt-1 block w-full rounded-md border-gray-200 bg-gray-50 text-gray-600 shadow-sm" placeholder="Semestre 1 2026">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Año</label>
             <input v-model="formGestion.anio" required type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="2026">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Periodo</label>
-            <input v-model="formGestion.periodo" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="1">
+            <label class="block text-sm font-medium text-gray-700">Semestre</label>
+            <select v-model="formGestion.periodo" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+              <option value="" disabled>Seleccione...</option>
+              <option value="1">Semestre 1</option>
+              <option value="2">Semestre 2</option>
+            </select>
           </div>
           <div class="flex items-end">
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full md:w-auto">Guardar Gestión</button>
@@ -50,6 +54,7 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Semestre</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Año</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -58,6 +63,7 @@
           <tbody class="divide-y divide-gray-200">
             <tr v-for="g in todasLasGestiones" :key="g.id">
               <td class="px-6 py-4 font-medium">{{ g.nombre }}</td>
+              <td class="px-6 py-4">Semestre {{ g.periodo }}</td>
               <td class="px-6 py-4">{{ g.anio }}</td>
               <td class="px-6 py-4">
                 <span :class="{
@@ -82,7 +88,7 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="!todasLasGestiones.length"><td colspan="4" class="px-6 py-4 text-center text-gray-500">No hay gestiones</td></tr>
+            <tr v-if="!todasLasGestiones.length"><td colspan="5" class="px-6 py-4 text-center text-gray-500">No hay gestiones</td></tr>
           </tbody>
         </table>
       </div>
@@ -483,13 +489,20 @@ const diasSemana = [
   { id: 7, nombre: 'Domingo' },
 ];
 
-const formGestion = ref({ nombre: '', anio: '', periodo: '' });
+const formGestion = ref({ anio: '', periodo: '' });
 const formMateria = ref({ codigo: '', nombre: '' });
 const formAula = ref({ codigo: '', nombre: '', capacidad: '' });
 const formGrupo = ref({ gestion_id: '', codigo: '', aula_id: '' });
 const formDocente = ref({ ci: '', nombres: '', apellidos: '', correo: '', telefono: '' });
 const formAsignacion = ref({ grupo_id: '', materia_id: '', docente_id: '', dia_semana: '', hora_inicio: '', hora_fin: '' });
 const toast = useToast();
+const nombreGestionPreview = computed(() => {
+  if (!formGestion.value.anio || !formGestion.value.periodo) {
+    return '';
+  }
+
+  return `Semestre ${formGestion.value.periodo} ${formGestion.value.anio}`;
+});
 const materiasActivas = computed(() => materias.value.filter(materia => materia.activa));
 
 const cargarTodasLasGestiones = async () => {
@@ -506,7 +519,7 @@ const crearGestion = async () => {
     const { data } = await axios.post('/api/gestiones', formGestion.value);
     if (data.ok) {
       toast.success('Gestion creada', 'La gestion fue registrada correctamente.');
-      formGestion.value = { nombre: '', anio: '', periodo: '' };
+      formGestion.value = { anio: '', periodo: '' };
       cargarTodasLasGestiones();
     }
   } catch (e) { toast.error('No se pudo crear', e.response?.data?.message || 'Error al crear gestion'); }

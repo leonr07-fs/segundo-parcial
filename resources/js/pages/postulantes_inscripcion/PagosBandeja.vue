@@ -9,29 +9,57 @@ const emit = defineEmits(['navigate']);
 const loading = ref(true);
 const inscripciones = ref([]);
 const serverMessage = ref('');
+const estadoFiltro = ref('pendientes');
 
-onMounted(async () => {
+async function cargarBandeja() {
+    loading.value = true;
+    serverMessage.value = '';
     try {
-        const payload = await fetchInscripcionesPendientesPago();
+        const payload = await fetchInscripcionesPendientesPago(estadoFiltro.value);
         inscripciones.value = payload.data.inscripciones;
     } catch (error) {
-        serverMessage.value = 'Error al cargar la lista de postulantes habilitados para pago.';
+        serverMessage.value = 'Error al cargar la lista de postulantes.';
     } finally {
         loading.value = false;
     }
+}
+
+onMounted(async () => {
+    await cargarBandeja();
 });
 
 function verDetalle(id) {
     emit('navigate', `/admin/pagos/${id}`);
 }
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('es-BO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
 </script>
 
 <template>
     <div>
-        <header class="mb-6 flex items-center justify-between">
+        <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">Verificar y Registrar Pagos</h1>
                 <p class="mt-1 text-sm text-slate-500">Gestión de pagos CUP para postulantes con documentos aprobados.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <select v-model="estadoFiltro" class="rounded-md border border-slate-300 px-3 py-2 text-sm bg-white" @change="cargarBandeja">
+                    <option value="pendientes">Pendientes de Pago</option>
+                    <option value="pagados">Pagados (Historial)</option>
+                    <option value="todos">Todos</option>
+                </select>
+                <button class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800" @click="cargarBandeja">
+                    Actualizar
+                </button>
             </div>
         </header>
 
@@ -63,6 +91,10 @@ function verDetalle(id) {
                         <th class="px-6 py-3 font-semibold text-slate-900">Postulante</th>
                         <th class="px-6 py-3 font-semibold text-slate-900">CI</th>
                         <th class="px-6 py-3 font-semibold text-slate-900">Gestión</th>
+                        <th v-if="estadoFiltro !== 'pendientes'" class="px-6 py-3 font-semibold text-slate-900">Método</th>
+                        <th v-if="estadoFiltro !== 'pendientes'" class="px-6 py-3 font-semibold text-slate-900">Referencia</th>
+                        <th v-if="estadoFiltro !== 'pendientes'" class="px-6 py-3 font-semibold text-slate-900">Monto</th>
+                        <th v-if="estadoFiltro !== 'pendientes'" class="px-6 py-3 font-semibold text-slate-900">Fecha Pago</th>
                         <th class="px-6 py-3 text-right font-semibold text-slate-900">Acción</th>
                     </tr>
                 </thead>
@@ -74,12 +106,32 @@ function verDetalle(id) {
                         </td>
                         <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ ins.postulante.ci }}</td>
                         <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ ins.gestion.nombre }}</td>
+                        
+                        <!-- Campos de Pago -->
+                        <td v-if="estadoFiltro !== 'pendientes'" class="whitespace-nowrap px-6 py-4 text-slate-700">
+                            <span v-if="ins.pagos && ins.pagos.length" class="capitalize">{{ ins.pagos[0].metodo }}</span>
+                            <span v-else>-</span>
+                        </td>
+                        <td v-if="estadoFiltro !== 'pendientes'" class="whitespace-nowrap px-6 py-4 text-slate-700 font-mono text-xs uppercase">
+                            <span v-if="ins.pagos && ins.pagos.length">{{ ins.pagos[0].referencia }}</span>
+                            <span v-else>-</span>
+                        </td>
+                        <td v-if="estadoFiltro !== 'pendientes'" class="whitespace-nowrap px-6 py-4 text-slate-700">
+                            <span v-if="ins.pagos && ins.pagos.length">{{ ins.pagos[0].monto }} BOB</span>
+                            <span v-else>-</span>
+                        </td>
+                        <td v-if="estadoFiltro !== 'pendientes'" class="whitespace-nowrap px-6 py-4 text-slate-700">
+                            <span v-if="ins.pagos && ins.pagos.length">{{ formatDate(ins.pagos[0].pagado_en) }}</span>
+                            <span v-else>-</span>
+                        </td>
+
                         <td class="whitespace-nowrap px-6 py-4 text-right">
                             <button
                                 @click="verDetalle(ins.id)"
-                                class="inline-flex items-center rounded bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                class="inline-flex items-center rounded px-3 py-1.5 text-xs font-semibold transition"
+                                :class="ins.estado === 'documentos_aprobados' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
                             >
-                                Registrar Pago
+                                {{ ins.estado === 'documentos_aprobados' ? 'Registrar Pago' : 'Ver Recibo' }}
                             </button>
                         </td>
                     </tr>

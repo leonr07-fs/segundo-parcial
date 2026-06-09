@@ -289,10 +289,6 @@ class ImportacionResultadosService
             return "No se puede registrar el Examen {$numeroExamen} antes de registrar el Examen " . ($numeroExamen - 1) . '.';
         }
 
-        if ((float) $evaluacion->{$anterior} < 60) {
-            return "No se puede registrar el Examen {$numeroExamen} porque reprobo el Examen " . ($numeroExamen - 1) . '.';
-        }
-
         return null;
     }
 

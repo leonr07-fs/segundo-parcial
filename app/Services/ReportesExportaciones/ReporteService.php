@@ -17,8 +17,14 @@ use App\Models\EvaluacionesResultados\ResultadoCup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
+use App\Services\GestionAcademica\GestionVigenteService;
+
 class ReporteService
 {
+    public function __construct(private readonly GestionVigenteService $gestionVigenteService)
+    {
+    }
+
     public function catalogo(): array
     {
         return [
@@ -98,6 +104,8 @@ class ReporteService
 
     private function reporteResultados(string $titulo, ?string $estado, array $filtros): array
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = ResultadoCup::query()
             ->with([
                 'inscripcion.postulante',
@@ -105,7 +113,7 @@ class ReporteService
                 'inscripcion.asignacionCarrera.carrera',
             ])
             ->when($estado, fn (Builder $query) => $query->where('estado_final', $estado))
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId)))
+            ->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId))
             ->orderByDesc('promedio_final');
 
         $this->aplicarFechas($query, $filtros, 'cerrado_en');
@@ -131,9 +139,11 @@ class ReporteService
 
     private function reporteMaterias(array $filtros): array
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = Evaluacion::query()
             ->with(['grupoMateria.materia', 'inscripcion.gestion'])
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId)));
+            ->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId));
 
         $filas = $query->get()
             ->groupBy(fn (Evaluacion $evaluacion) => $evaluacion->grupoMateria?->materia?->nombre ?? 'Sin materia')
@@ -162,10 +172,12 @@ class ReporteService
 
     private function reporteGrupos(array $filtros): array
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = Grupo::query()
             ->with(['gestion', 'aula'])
             ->withCount('inscripciones')
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->where('gestion_id', $gestionId))
+            ->where('gestion_id', $gestionId)
             ->orderBy('codigo');
 
         return $this->respuesta('Grupos y cupos', [
@@ -187,9 +199,11 @@ class ReporteService
 
     private function reporteDocentesGrupo(array $filtros): array
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = GrupoMateria::query()
             ->with(['grupo.gestion', 'materia', 'docente', 'horarios'])
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->whereHas('grupo', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId)))
+            ->whereHas('grupo', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId))
             ->orderBy('grupo_id');
 
         return $this->respuesta('Docentes por grupo', [
@@ -211,9 +225,11 @@ class ReporteService
 
     private function reporteAsignacionCarrera(array $filtros): array
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = AsignacionCarrera::query()
             ->with(['inscripcion.postulante', 'inscripcion.gestion', 'inscripcion.opcionesCarrera.carrera', 'carrera'])
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId)))
+            ->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId))
             ->orderByDesc('promedio_usado');
 
         return $this->respuesta('Asignacion de carreras', [
@@ -243,9 +259,11 @@ class ReporteService
 
     private function reporteAsistencias(array $filtros): array
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = Asistencia::query()
             ->with(['grupoMateria.grupo.gestion', 'grupoMateria.materia', 'inscripcion.postulante', 'docente'])
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->whereHas('grupoMateria.grupo', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId)))
+            ->whereHas('grupoMateria.grupo', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId))
             ->orderByDesc('fecha');
 
         $this->aplicarFechas($query, $filtros, 'fecha');
@@ -309,9 +327,11 @@ class ReporteService
 
     private function filasPostulantes(array $filtros): Collection
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = Inscripcion::query()
             ->with(['postulante', 'gestion'])
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->where('gestion_id', $gestionId))
+            ->where('gestion_id', $gestionId)
             ->orderByDesc('id');
 
         $this->aplicarFechas($query, $filtros, 'created_at');
@@ -331,9 +351,11 @@ class ReporteService
 
     private function filasPagos(array $filtros): Collection
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = Pago::query()
             ->with(['inscripcion.postulante', 'inscripcion.gestion'])
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId)))
+            ->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId))
             ->orderByDesc('id');
 
         $this->aplicarFechas($query, $filtros, 'pagado_en');
@@ -352,9 +374,11 @@ class ReporteService
 
     private function filasEvaluaciones(array $filtros): Collection
     {
+        $gestionId = $this->resolveGestionId($filtros);
+
         $query = Evaluacion::query()
             ->with(['inscripcion.postulante', 'inscripcion.gestion', 'grupoMateria.grupo', 'grupoMateria.materia'])
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId)))
+            ->whereHas('inscripcion', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId))
             ->when($filtros['materia_id'] ?? null, fn (Builder $query, $materiaId) => $query->whereHas('grupoMateria', fn (Builder $subquery) => $subquery->where('materia_id', $materiaId)))
             ->orderByDesc('id');
 
@@ -507,5 +531,17 @@ class ReporteService
         }
 
         return method_exists($fecha, 'toDateTimeString') ? $fecha->toDateTimeString() : (string) $fecha;
+    }
+
+    private function resolveGestionId(array $filtros): int
+    {
+        $gestionVigente = $this->gestionVigenteService->actual();
+        $gestionId = $gestionVigente?->id ?? 0;
+
+        if (isset($filtros['gestion_id']) && (int) $filtros['gestion_id'] !== $gestionId) {
+            return 0;
+        }
+
+        return $gestionId;
     }
 }

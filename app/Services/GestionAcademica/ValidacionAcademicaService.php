@@ -38,53 +38,30 @@ class ValidacionAcademicaService
             }
         }
 
-        if ($evaluacion->examen_1 !== null && $evaluacion->examen_1 < 60) {
-            $evaluacion->estado = EvaluacionState::REPROBADO;
-            $this->guardarSiHuboCambios($evaluacion, $estadoAnterior, $observacionAnterior, $guardar);
-
-            if ($evaluacion->examen_2 !== null || $evaluacion->examen_3 !== null) {
-                throw new \Exception("El estudiante reprobó el Examen 1 con {$evaluacion->examen_1}. No está habilitado para registrar más notas.");
-            }
-
-            return true;
-        }
-
-        if ($evaluacion->examen_2 !== null && $evaluacion->examen_2 < 60) {
-            $evaluacion->estado = EvaluacionState::REPROBADO;
-            $this->guardarSiHuboCambios($evaluacion, $estadoAnterior, $observacionAnterior, $guardar);
-
-            if ($evaluacion->examen_3 !== null) {
-                throw new \Exception("El estudiante reprobó el Examen 2 con {$evaluacion->examen_2}. No está habilitado para registrar más notas.");
-            }
-
-            return true;
-        }
-
-        if ($evaluacion->examen_3 !== null && $evaluacion->examen_3 < 60) {
-            $evaluacion->estado = EvaluacionState::REPROBADO;
-            return $this->guardarSiHuboCambios($evaluacion, $estadoAnterior, $observacionAnterior, $guardar);
-        }
-
         if ($evaluacion->examen_1 === null) {
             $evaluacion->estado = EvaluacionState::INCOMPLETO;
             $evaluacion->observacion = 'Falta el Examen 1.';
             return $this->guardarSiHuboCambios($evaluacion, $estadoAnterior, $observacionAnterior, $guardar);
         }
 
-        if ($evaluacion->examen_1 >= 60 && $evaluacion->examen_2 === null) {
+        if ($evaluacion->examen_2 === null) {
             $evaluacion->estado = EvaluacionState::INCOMPLETO;
-            $evaluacion->observacion = 'El estudiante aprobo el Examen 1, falta el Examen 2.';
+            $evaluacion->observacion = 'Falta el Examen 2.';
             return $this->guardarSiHuboCambios($evaluacion, $estadoAnterior, $observacionAnterior, $guardar);
         }
 
-        if ($evaluacion->examen_2 >= 60 && $evaluacion->examen_3 === null) {
+        if ($evaluacion->examen_3 === null) {
             $evaluacion->estado = EvaluacionState::INCOMPLETO;
-            $evaluacion->observacion = 'El estudiante aprobo los primeros 2 examenes, falta el Examen 3.';
+            $evaluacion->observacion = 'Falta el Examen 3.';
             return $this->guardarSiHuboCambios($evaluacion, $estadoAnterior, $observacionAnterior, $guardar);
         }
 
-        $evaluacion->estado = EvaluacionState::APROBADO;
         $evaluacion->promedio = round(($evaluacion->examen_1 + $evaluacion->examen_2 + $evaluacion->examen_3) / 3, 2);
+        if ($evaluacion->promedio >= 60) {
+            $evaluacion->estado = EvaluacionState::APROBADO;
+        } else {
+            $evaluacion->estado = EvaluacionState::REPROBADO;
+        }
 
         return $this->guardarSiHuboCambios($evaluacion, $estadoAnterior, $observacionAnterior, $guardar);
     }

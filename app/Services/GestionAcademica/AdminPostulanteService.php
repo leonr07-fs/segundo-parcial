@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 class AdminPostulanteService
 {
-    public function __construct(private readonly AuditLogService $auditLogService)
-    {
+    public function __construct(
+        private readonly AuditLogService $auditLogService,
+        private readonly GestionVigenteService $gestionVigenteService,
+    ) {
     }
 
     /**
@@ -23,9 +25,18 @@ class AdminPostulanteService
      */
     public function buscar(array $filtros): LengthAwarePaginator
     {
+        $gestionVigente = $this->gestionVigenteService->actual();
+
+        if (!$gestionVigente) {
+            return new LengthAwarePaginator([], 0, 15);
+        }
+
+        $gestionId = $gestionVigente->id;
+
         $query = Postulante::query()->with([
             'usuario',
             'inscripciones' => fn ($q) => $q->with(['gestion', 'validacionDocumental'])
+                ->where('gestion_id', $gestionId)
                 ->orderByDesc('fecha_inscripcion')
                 ->orderByDesc('id'),
         ]);
@@ -47,11 +58,7 @@ class AdminPostulanteService
             });
         }
 
-        if (!empty($filtros['gestion_id'])) {
-            $query->whereHas('inscripciones', function ($q) use ($filtros) {
-                $q->where('gestion_id', $filtros['gestion_id']);
-            });
-        }
+        $query->whereHas('inscripciones', fn ($q) => $q->where('gestion_id', $gestionId));
 
         return $query->orderBy('created_at', 'desc')->paginate(15);
     }
@@ -61,16 +68,21 @@ class AdminPostulanteService
      */
     public function expedienteCompleto(int $postulanteId): Postulante
     {
+        $gestionVigente = $this->gestionVigenteService->actual();
+        $gestionId = $gestionVigente?->id ?? 0;
+
         return Postulante::with([
-            'inscripciones.gestion',
-            'inscripciones.opcionesCarrera.carrera',
-            'inscripciones.documentos',
-            'inscripciones.validacionDocumental',
-            'inscripciones.pagos',
-            'inscripciones.evaluaciones.materia',
-            'inscripciones.resultadoCup',
-            'inscripciones.asignacionCarrera.carrera',
-            'inscripciones.grupos',
+            'inscripciones' => fn ($q) => $q->where('gestion_id', $gestionId)->with([
+                'gestion',
+                'opcionesCarrera.carrera',
+                'documentos',
+                'validacionDocumental',
+                'pagos',
+                'evaluaciones.materia',
+                'resultadoCup',
+                'asignacionCarrera.carrera',
+                'grupos',
+            ]),
             'usuario',
         ])->findOrFail($postulanteId);
     }

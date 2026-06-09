@@ -11,6 +11,8 @@ use App\Services\GestionAcademica\AsignacionCarreraService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+use App\Services\GestionAcademica\GestionVigenteService;
+
 /**
  * [CU12] Asignar carrera por cupos (1ra y 2da opción)
  * Vinculación UML: Permite definir cupos por carrera y ejecutar el algoritmo de asignación de carrera a estudiantes aprobados.
@@ -18,8 +20,10 @@ use Illuminate\Http\Request;
 
 class AsignacionCarreraController extends Controller
 {
-    public function __construct(private readonly AsignacionCarreraService $service)
-    {
+    public function __construct(
+        private readonly AsignacionCarreraService $service,
+        private readonly GestionVigenteService $gestionVigenteService,
+    ) {
     }
 
     public function ejecutar(Request $request): JsonResponse
@@ -111,14 +115,20 @@ class AsignacionCarreraController extends Controller
     private function resolverGestion(Request $request): Gestion
     {
         $gestionId = $request->input('gestion_id', $request->query('gestion_id'));
+        $gestionVigente = $this->gestionVigenteService->actual();
 
         if ($gestionId !== null) {
-            return Gestion::findOrFail((int) $gestionId);
+            $gestion = Gestion::findOrFail((int) $gestionId);
+            if (!$gestionVigente || $gestion->id !== $gestionVigente->id) {
+                throw new \DomainException('La gestion seleccionada esta deshabilitada/cerrada.');
+            }
+            return $gestion;
         }
 
-        return Gestion::whereIn('estado', ['activa', 'inhabilitada', 'inscripcion'])
-            ->orderByRaw("case estado when 'activa' then 0 when 'inhabilitada' then 1 when 'inscripcion' then 2 else 3 end")
-            ->orderByDesc('created_at')
-            ->firstOrFail();
+        if (!$gestionVigente) {
+            throw new \DomainException('No hay ninguna gestion activa o habilitada.');
+        }
+
+        return $gestionVigente;
     }
 }

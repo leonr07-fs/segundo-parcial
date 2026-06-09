@@ -28,12 +28,13 @@ class GestionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:100',
             'anio' => 'required|integer',
-            'periodo' => 'required|string|max:50',
+            'periodo' => 'required|integer|in:1,2',
             'fecha_inicio' => 'nullable|date',
             'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
         ]);
+
+        $validated['nombre'] = Gestion::nombreDesdePeriodo($validated['periodo'], $validated['anio']);
 
         $gestion = Gestion::create(array_merge($validated, [
             'estado' => GestionState::PLANIFICADA, // Por defecto se crea pero no se habilita hasta que el admin le de al botón
@@ -49,9 +50,13 @@ class GestionController extends Controller
     public function habilitar(int $id)
     {
         DB::transaction(function () use ($id) {
-            // Cerramos nuevas postulaciones de cualquier otra gestion activa.
-            Gestion::where('estado', GestionState::INSCRIPCION)->update([
-                'estado' => GestionState::INHABILITADA
+            // Cerramos definitivamente cualquier otra gestion activa o intermedia.
+            Gestion::whereIn('estado', [
+                GestionState::INSCRIPCION,
+                GestionState::INHABILITADA,
+                GestionState::EN_CURSO,
+            ])->update([
+                'estado' => GestionState::CERRADA
             ]);
 
             // Habilitamos la gestión solicitada

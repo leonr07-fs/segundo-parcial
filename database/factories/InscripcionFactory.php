@@ -14,12 +14,12 @@ class InscripcionFactory extends Factory
 
     public function definition(): array
     {
-        $gestion = Gestion::factory()->create();
+        $anio = (int) date('Y');
 
         return [
             'postulante_id' => Postulante::factory(),
-            'gestion_id' => $gestion->id,
-            'codigo' => fake()->unique()->bothify("CUP-{$gestion->anio}-#####"),
+            'gestion_id' => Gestion::factory(),
+            'codigo' => fake()->unique()->bothify("CUP-{$anio}-#####"),
             'fecha_inscripcion' => now(),
             'estado' => InscripcionState::PREPOSTULADO,
         ];

@@ -9,6 +9,7 @@ use App\Models\InscripcionPagos\Pago;
 use App\Models\InscripcionPagos\Recibo;
 use App\Models\Seguridad\User;
 use App\Services\GestionAcademica\CredentialService;
+use App\Services\GestionAcademica\GestionVigenteService;
 use App\Support\States\InscripcionState;
 use App\Support\States\PagoState;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,6 +31,7 @@ class PagoService
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly CredentialService $credentialService,
+        private readonly GestionVigenteService $gestionVigenteService,
     ) {
     }
 
@@ -40,10 +42,69 @@ class PagoService
      */
     public function listarPendientesPago(): Collection
     {
-        return Inscripcion::with(['postulante', 'gestion'])
-            ->where('estado', InscripcionState::DOCUMENTOS_APROBADOS)
-            ->orderBy('fecha_inscripcion', 'asc')
-            ->get();
+        return $this->listarPagosConFiltro('pendientes');
+    }
+
+    /**
+     * Lista inscripciones filtradas por estado de pago.
+     *
+     * @param string|null $estado
+     * @return Collection<int, Inscripcion>
+     */
+    public function listarPagosConFiltro(?string $estado = 'pendientes'): Collection
+    {
+        $gestionVigente = $this->gestionVigenteService->actual();
+
+        $query = Inscripcion::with(['postulante', 'gestion', 'pagos.recibo'])
+            ->when($gestionVigente, fn ($query) => $query->where('gestion_id', $gestionVigente->id))
+            ->when(! $gestionVigente, fn ($query) => $query->whereRaw('1 = 0'));
+
+        if ($estado === 'pendientes') {
+            $query->where('estado', InscripcionState::DOCUMENTOS_APROBADOS);
+        } elseif ($estado === 'pagados') {
+            $query->whereIn('estado', [
+                InscripcionState::PAGADO,
+                InscripcionState::INSCRITO,
+                InscripcionState::EN_CURSO,
+                InscripcionState::FINALIZADO,
+            ]);
+        }
+
+        return $query->orderBy('fecha_inscripcion', 'asc')->get();
+    }
+
+    /**
+     * Obtiene los detalles de inscripción, pago y credenciales asociadas.
+     *
+     * @param int $inscripcionId
+     * @return array
+     */
+    public function obtenerDetallesPago(int $inscripcionId): array
+    {
+        $inscripcion = Inscripcion::with(['postulante', 'gestion', 'pagos.recibo'])
+            ->findOrFail($inscripcionId);
+
+        $ultimoPago = $inscripcion->pagos->sortByDesc('created_at')->first();
+        $recibo = $ultimoPago?->recibo;
+
+        // Buscar el usuario postulante si existe
+        $usuario = User::where('email', $inscripcion->postulante->correo)->first();
+
+        $credenciales = null;
+        if ($usuario) {
+            $credenciales = [
+                'numero_registro' => $usuario->numero_registro,
+                'password_temporal' => $inscripcion->postulante->ci, // Mostrar el CI como contraseña temporal por defecto
+                'correo_enviado' => true,
+            ];
+        }
+
+        return [
+            'inscripcion' => $inscripcion,
+            'pago' => $ultimoPago,
+            'recibo' => $recibo,
+            'credenciales' => $credenciales,
+        ];
     }
 
     /**
@@ -63,6 +124,10 @@ class PagoService
         // Validar estado de la inscripción
         if ($inscripcion->estado !== InscripcionState::DOCUMENTOS_APROBADOS) {
             throw new \DomainException('La inscripción no está habilitada para registrar pagos.');
+        }
+
+        if ($inscripcion->gestion_id !== $this->gestionVigenteService->actual()?->id) {
+            throw new \DomainException('La inscripcion no pertenece a la gestion vigente.');
         }
 
         // E3: Validar que el monto coincida con el arancel vigente

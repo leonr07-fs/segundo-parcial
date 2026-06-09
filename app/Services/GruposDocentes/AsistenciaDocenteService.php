@@ -147,7 +147,12 @@ class AsistenciaDocenteService
             ];
         }
 
-        $asistencias = Asistencia::where('docente_id', $docente->id)->get();
+        $gestionVigente = app(\App\Services\GestionAcademica\GestionVigenteService::class)->actual();
+        $gestionId = $gestionVigente?->id ?? 0;
+
+        $asistencias = Asistencia::where('docente_id', $docente->id)
+            ->whereHas('grupoMateria.grupo', fn ($query) => $query->where('gestion_id', $gestionId))
+            ->get();
         $conteo = $asistencias->countBy('estado');
         $clases = $asistencias
             ->map(fn (Asistencia $asistencia) => $asistencia->grupo_materia_id.'|'.$asistencia->fecha?->toDateString())
@@ -248,11 +253,14 @@ class AsistenciaDocenteService
 
     private function consultaReporte(array $filtros = []): Builder
     {
+        $gestionVigente = app(\App\Services\GestionAcademica\GestionVigenteService::class)->actual();
+        $gestionId = $gestionVigente?->id ?? 0;
+
         return Asistencia::query()
             ->with(['grupoMateria.grupo.gestion', 'grupoMateria.materia', 'inscripcion.postulante', 'docente'])
             ->when($filtros['fecha_desde'] ?? null, fn (Builder $query, $fecha) => $query->whereDate('fecha', '>=', $fecha))
             ->when($filtros['fecha_hasta'] ?? null, fn (Builder $query, $fecha) => $query->whereDate('fecha', '<=', $fecha))
-            ->when($filtros['gestion_id'] ?? null, fn (Builder $query, $gestionId) => $query->whereHas('grupoMateria.grupo', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId)))
+            ->whereHas('grupoMateria.grupo', fn (Builder $subquery) => $subquery->where('gestion_id', $gestionId))
             ->when($filtros['docente_id'] ?? null, fn (Builder $query, $docenteId) => $query->where('docente_id', $docenteId));
     }
 

@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 
-export async function fetchInscripcionesPendientes() {
-    const response = await window.axios.get('/api/inscripciones/pendientes-validacion');
+export async function fetchInscripcionesPendientes(estado = 'pendientes') {
+    const response = await window.axios.get(`/api/inscripciones/pendientes-validacion?estado=${estado}`);
     return response.data;
 }
 

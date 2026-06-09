@@ -35,6 +35,11 @@ class Gestion extends Model
         ];
     }
 
+    public static function nombreDesdePeriodo(int|string $periodo, int|string $anio): string
+    {
+        return 'Semestre ' . trim((string) $periodo) . ' ' . trim((string) $anio);
+    }
+
     /* ------------------------------------------------------------------ */
     /*  Relaciones                                                        */
     /* ------------------------------------------------------------------ */

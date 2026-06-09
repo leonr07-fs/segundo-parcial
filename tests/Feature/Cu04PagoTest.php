@@ -31,14 +31,65 @@ class Cu04PagoTest extends TestCase
 
     public function test_admin_puede_listar_inscripciones_pendientes_de_pago(): void
     {
-        Inscripcion::factory()->count(2)->create(['estado' => InscripcionState::DOCUMENTOS_APROBADOS]);
-        Inscripcion::factory()->count(1)->create(['estado' => InscripcionState::PREPOSTULADO]); // No debe salir
+        $gestion = \App\Models\GestionAcademica\Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
+        Inscripcion::factory()->count(2)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::DOCUMENTOS_APROBADOS]);
+        Inscripcion::factory()->count(1)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::PREPOSTULADO]); // No debe salir
 
         $response = $this->actingAs($this->admin)->getJson('/api/inscripciones/pendientes-pago');
 
         $response->assertOk()
             ->assertJsonPath('ok', true)
             ->assertJsonCount(2, 'data.inscripciones');
+    }
+
+    public function test_admin_puede_listar_inscripciones_pagadas(): void
+    {
+        $gestion = \App\Models\GestionAcademica\Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
+        Inscripcion::factory()->count(2)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::DOCUMENTOS_APROBADOS]);
+        Inscripcion::factory()->count(3)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::PAGADO]);
+
+        $response = $this->actingAs($this->admin)->getJson('/api/inscripciones/pendientes-pago?estado=pagados');
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(3, 'data.inscripciones');
+    }
+
+    public function test_admin_puede_listar_todas_las_inscripciones_de_pago(): void
+    {
+        $gestion = \App\Models\GestionAcademica\Gestion::factory()->create(['estado' => \App\Support\States\GestionState::INSCRIPCION]);
+        Inscripcion::factory()->count(2)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::DOCUMENTOS_APROBADOS]);
+        Inscripcion::factory()->count(3)->create(['gestion_id' => $gestion->id, 'estado' => InscripcionState::PAGADO]);
+
+        $response = $this->actingAs($this->admin)->getJson('/api/inscripciones/pendientes-pago?estado=todos');
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(5, 'data.inscripciones');
+    }
+
+    public function test_admin_puede_obtener_detalles_de_pago_registrado(): void
+    {
+        $inscripcion = Inscripcion::factory()->create(['estado' => InscripcionState::PAGADO]);
+        $pago = \App\Models\InscripcionPagos\Pago::factory()->create([
+            'inscripcion_id' => $inscripcion->id,
+            'monto' => 300.00,
+            'metodo' => 'paypal',
+            'referencia' => 'ORDER-123',
+            'estado' => PagoState::APROBADO,
+        ]);
+        $recibo = \App\Models\InscripcionPagos\Recibo::factory()->create([
+            'pago_id' => $pago->id,
+            'numero' => 'REC-123',
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson("/api/inscripciones/{$inscripcion->id}/pagos");
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.inscripcion.id', $inscripcion->id)
+            ->assertJsonPath('data.pago.referencia', 'ORDER-123')
+            ->assertJsonPath('data.recibo.numero', 'REC-123');
     }
 
     /* ================================================================== */

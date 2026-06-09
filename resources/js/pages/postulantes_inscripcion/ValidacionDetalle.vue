@@ -36,6 +36,7 @@ const labelTipoDocumento = {
 const postulante = computed(() => expediente.value?.inscripcion?.postulante ?? {});
 const inscripcion = computed(() => expediente.value?.inscripcion ?? {});
 const credenciales = computed(() => resultadoValidacion.value?.data?.credenciales ?? null);
+const isReadOnly = computed(() => !['prepostulado', 'documentos_pendientes'].includes(inscripcion.value.estado));
 
 const datosPostulante = computed(() => [
     ['Nombre completo', nombreCompleto(postulante.value)],
@@ -245,7 +246,7 @@ async function handleSubmit() {
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">
                         <label class="block">
                             <span class="text-sm font-medium text-slate-700">Dictamen <span class="text-red-500">*</span></span>
-                            <select v-model="rev.estado" required class="mt-1.5 w-full rounded border border-slate-300 p-2 text-sm outline-none focus:border-cyan-600">
+                            <select v-model="rev.estado" :disabled="isReadOnly" required class="mt-1.5 w-full rounded border border-slate-300 p-2 text-sm outline-none focus:border-cyan-600 disabled:bg-slate-100 disabled:text-slate-500">
                                 <option value="" disabled>Seleccionar resultado</option>
                                 <option value="aprobado">Aprobado</option>
                                 <option value="observado">Observado (Corregible)</option>
@@ -256,13 +257,13 @@ async function handleSubmit() {
 
                         <label class="block">
                             <span class="text-sm font-medium text-slate-700">Observacion <span v-if="rev.estado === 'observado' || rev.estado === 'rechazado'" class="text-red-500">*</span></span>
-                            <input v-model="rev.observacion" type="text" :required="rev.estado === 'observado' || rev.estado === 'rechazado'" placeholder="Detalle si hay problema..." class="mt-1.5 w-full rounded border border-slate-300 p-2 text-sm outline-none focus:border-cyan-600">
+                            <input v-model="rev.observacion" :disabled="isReadOnly" type="text" :required="rev.estado === 'observado' || rev.estado === 'rechazado'" placeholder="Detalle si hay problema..." class="mt-1.5 w-full rounded border border-slate-300 p-2 text-sm outline-none focus:border-cyan-600 disabled:bg-slate-100 disabled:text-slate-500">
                             <span v-if="fieldErrors[`revisiones.${index}.observacion`]" class="mt-1 text-xs text-red-600">{{ fieldErrors[`revisiones.${index}.observacion`][0] }}</span>
                         </label>
                     </div>
                 </div>
 
-                <div class="flex justify-end pt-4">
+                <div v-if="!isReadOnly" class="flex justify-end pt-4">
                     <button type="submit" :disabled="submitting" class="rounded bg-cyan-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:opacity-50">
                         {{ submitting ? 'Guardando...' : 'Guardar Revision Documental' }}
                     </button>

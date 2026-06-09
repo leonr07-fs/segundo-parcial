@@ -19,11 +19,12 @@ class ValidacionDocumentalController extends Controller
     }
 
     /**
-     * Retorna la lista de inscripciones pendientes de validacion documental.
+     * Retorna la lista de inscripciones de validacion documental filtradas por estado.
      */
-    public function index(): JsonResponse
+    public function index(\Illuminate\Http\Request $request): JsonResponse
     {
-        $inscripciones = $this->validacionService->listarPendientes();
+        $estado = $request->query('estado', 'pendientes');
+        $inscripciones = $this->validacionService->listarConFiltro($estado);
 
         return response()->json([
             'ok' => true,

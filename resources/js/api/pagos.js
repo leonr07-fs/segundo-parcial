@@ -1,5 +1,10 @@
-export async function fetchInscripcionesPendientesPago() {
-    const response = await window.axios.get('/api/inscripciones/pendientes-pago');
+export async function fetchInscripcionesPendientesPago(estado = 'pendientes') {
+    const response = await window.axios.get(`/api/inscripciones/pendientes-pago?estado=${estado}`);
+    return response.data;
+}
+
+export async function fetchPagoDetalle(inscripcionId) {
+    const response = await window.axios.get(`/api/inscripciones/${inscripcionId}/pagos`);
     return response.data;
 }
 

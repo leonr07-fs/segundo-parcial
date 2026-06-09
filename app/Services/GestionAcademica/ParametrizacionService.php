@@ -22,6 +22,10 @@ use Illuminate\Support\Facades\Mail;
 
 class ParametrizacionService
 {
+    public function __construct(private readonly GestionVigenteService $gestionVigenteService)
+    {
+    }
+
     public function listarMaterias()
     {
         return Materia::orderBy('nombre')->orderBy('codigo')->get();
@@ -79,13 +83,17 @@ class ParametrizacionService
 
     public function listarGrupos(?int $gestionId = null)
     {
-        $query = Grupo::with(['gestion', 'aula', 'materias']);
+        $gestionVigente = $this->gestionVigenteService->actual();
+        $gestionId = $gestionId ?? $gestionVigente?->id ?? 0;
 
-        if ($gestionId) {
-            $query->where('gestion_id', $gestionId);
+        if (!$gestionVigente || $gestionId !== $gestionVigente->id) {
+            return collect();
         }
 
-        return $query->orderBy('codigo')->get();
+        return Grupo::with(['gestion', 'aula', 'materias'])
+            ->where('gestion_id', $gestionId)
+            ->orderBy('codigo')
+            ->get();
     }
 
     public function crearGrupo(array $datos): Grupo
@@ -104,7 +112,26 @@ class ParametrizacionService
 
     public function listarDocentes()
     {
-        return Docente::orderBy('nombres')->get();
+        $gestionVigente = $this->gestionVigenteService->actual();
+
+        if (!$gestionVigente) {
+            return collect();
+        }
+
+        return Docente::query()
+            ->where('activo', true)
+            ->where(function ($query) use ($gestionVigente) {
+                $query->whereHas('repostulaciones', function ($q) use ($gestionVigente) {
+                    $q->where('gestion_id', $gestionVigente->id)
+                      ->where('estado', \App\Support\States\RepostulacionDocenteState::APROBADA);
+                })
+                ->orWhereHas('grupoMaterias.grupo', function ($q) use ($gestionVigente) {
+                    $q->where('gestion_id', $gestionVigente->id);
+                })
+                ->orWhereDoesntHave('grupoMaterias'); // Newly created/registered docentes with no history
+            })
+            ->orderBy('nombres')
+            ->get();
     }
 
     public function crearDocente(array $datos): array

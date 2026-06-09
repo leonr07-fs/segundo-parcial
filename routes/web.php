@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'app')->name('home');
 Route::view('/login', 'app')->name('login');
 
-Route::post('/login', [AuthenticatedSessionController::class, 'store'])->middleware('guest')->name('login.store');
+Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->middleware('auth')->name('logout');
 Route::post('/forgot-password', [PasswordController::class, 'forgot'])->middleware('guest')->name('password.forgot');
 Route::post('/reset-password', [PasswordController::class, 'reset'])->middleware('guest')->name('password.reset');
@@ -124,6 +124,7 @@ Route::middleware(['auth', 'role:admin,autoridad,coordinador'])->group(function 
     Route::view('/admin/pagos/{id}', 'app')->name('admin.pagos.detalle');
     Route::get('/api/inscripciones/pendientes-pago', [\App\Http\Controllers\PortalPostulante\PagoController::class, 'index'])->name('api.pagos.index');
     Route::post('/api/inscripciones/{id}/pagos', [\App\Http\Controllers\PortalPostulante\PagoController::class, 'store'])->middleware('role:admin')->name('api.pagos.store');
+    Route::get('/api/inscripciones/{id}/pagos', [\App\Http\Controllers\PortalPostulante\PagoController::class, 'show'])->name('api.pagos.show');
 
     /* CU09 - Importar Resultados Académicos */
     Route::view('/admin/evaluaciones/importar', 'app')->name('admin.evaluaciones.importar');
@@ -158,4 +159,3 @@ Route::post('/api/pagos/paypal/capture-order', [\App\Http\Controllers\PortalPost
 // NOTA: Como todo está en web.php con middleware web por defecto, el webhook necesita estar fuera de VerifyCsrfToken.
 // Por lo tanto, agregaremos el route. O lo ideal sería configurar VerifyCsrfToken.php.
 Route::post('/api/webhooks/paypal', [\App\Http\Controllers\PortalPostulante\PayPalController::class, 'webhook'])->name('api.paypal.webhook');
-

@@ -1,8 +1,8 @@
 <script setup>
 // [CU04] Registrar/verificar pago - Formulario de cobro y registro de referencia de pago
 
-import { ref } from 'vue';
-import { registrarPago } from '../../api/pagos';
+import { ref, onMounted } from 'vue';
+import { registrarPago, fetchPagoDetalle } from '../../api/pagos';
 
 const props = defineProps({
     inscripcionId: {
@@ -13,6 +13,7 @@ const props = defineProps({
 
 const emit = defineEmits(['back']);
 
+const loadingDetails = ref(true);
 const submitting = ref(false);
 const serverMessage = ref('');
 const fieldErrors = ref({});
@@ -25,6 +26,24 @@ const form = ref({
     monto: '300.00', // Arancel por defecto
     metodo: 'Transferencia Bancaria',
     referencia: '',
+});
+
+onMounted(async () => {
+    try {
+        const payload = await fetchPagoDetalle(props.inscripcionId);
+        if (payload.ok && payload.data.pago) {
+            form.value.monto = payload.data.pago.monto;
+            form.value.referencia = payload.data.pago.referencia;
+            form.value.metodo = payload.data.pago.metodo;
+            reciboDetails.value = payload.data.recibo;
+            credenciales.value = payload.data.credenciales;
+            success.value = true;
+        }
+    } catch (error) {
+        // Si no se encuentra pago, continuamos para que el usuario pueda registrarlo
+    } finally {
+        loadingDetails.value = false;
+    }
 });
 
 async function handleSubmit() {
@@ -55,7 +74,14 @@ async function handleSubmit() {
 
 <template>
     <div class="mx-auto max-w-2xl">
-        <div v-if="success" class="rounded-lg border border-emerald-200 bg-white p-8 text-center shadow-sm">
+        <div v-if="loadingDetails" class="flex items-center justify-center py-12">
+            <svg class="h-6 w-6 animate-spin text-emerald-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span class="ml-3 text-sm text-slate-500">Cargando detalles de pago...</span>
+        </div>
+        <div v-else-if="success" class="rounded-lg border border-emerald-200 bg-white p-8 text-center shadow-sm">
             <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
                 <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />

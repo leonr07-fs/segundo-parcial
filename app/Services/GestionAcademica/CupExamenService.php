@@ -140,13 +140,11 @@ class CupExamenService
 
     private function examenReprobado(array $notas, ?string $estado): ?string
     {
-        foreach ($notas as $numero => $nota) {
-            if ($nota !== null && $nota < 60) {
-                return $this->ordinalExamen($numero);
-            }
+        if ($estado === 'reprobado') {
+            return 'promedio final';
         }
 
-        return $estado === 'reprobado' ? 'primer examen' : null;
+        return null;
     }
 
     private function siguienteExamen(Collection $materias): ?int

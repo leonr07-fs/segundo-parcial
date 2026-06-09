@@ -19,7 +19,7 @@
           <label class="block text-sm font-medium text-gray-700">Materia (Docente)</label>
           <select v-model="materiaSeleccionada" required @change="cargarNotas" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
             <option value="" disabled>Seleccione materia...</option>
-            <option v-for="m in materias" :key="m.pivot.id" :value="m.pivot.id">
+            <option v-for="m in materias" :key="m.id" :value="m.id">
               {{ m.codigo }} - {{ m.nombre }}
             </option>
           </select>
@@ -63,7 +63,7 @@
             </td>
             <td class="px-6 py-4 text-center">
               <span :class="getEstadoBadgeClass(estudiante.estado)">
-                {{ estudiante.estado.toUpperCase() }}
+                {{ (estudiante.estado || 'pendiente').toUpperCase() }}
               </span>
             </td>
           </tr>
