@@ -124,6 +124,42 @@ class ConsultaPostulacionController extends Controller
     }
 
     /**
+     * Obtener los libros de estudio disponibles para un postulante (sin grupo aún).
+     */
+    public function obtenerLibros(string $ci): JsonResponse
+    {
+        $ci = trim($ci);
+
+        // Verificar que el postulante existe
+        $postulante = Postulante::where('ci', $ci)->first();
+
+        if (! $postulante) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Postulante no encontrado.',
+            ], 404);
+        }
+
+        // Devolver todos los libros disponibles, agrupados por materia
+        $libros = \App\Models\GestionAcademica\Libro::with('materia')
+            ->get()
+            ->map(fn ($libro) => [
+                'id' => $libro->id,
+                'titulo' => $libro->titulo,
+                'materia' => $libro->materia?->nombre,
+                'url' => asset('storage/' . $libro->archivo_path),
+            ])
+            ->values();
+
+        return response()->json([
+            'ok' => true,
+            'data' => [
+                'libros' => $libros,
+            ],
+        ]);
+    }
+
+    /**
      * Capturar una orden PayPal para pago público (sin auth).
      */
     public function captureOrder(Request $request): JsonResponse

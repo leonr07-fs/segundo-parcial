@@ -213,15 +213,38 @@ class DashboardController extends Controller
             ], 403);
         }
 
-        if ($inscripcion->resultadoCup?->estado_final === 'reprobado') {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Su gestion fue reprobada. Debe realizar una repostulacion desde la pagina inicial.',
-            ], 403);
-        }
+        // Validación de estado_final removida: postulantes pueden acceder al dashboard
+        // sin importar si el examen está aprobado, reprobado, pendiente o sin nota
 
         $grupo = $inscripcion?->grupos->first();
         $resumenCup = app(CupExamenService::class)->resumen($inscripcion);
+
+        // Obtener libros filtrados por las materias del grupo del estudiante
+        $libros = [];
+        if ($grupo) {
+            $materiasDelGrupo = $grupo->materias()->pluck('materia_id')->toArray();
+            $libros = \App\Models\GestionAcademica\Libro::with('materia')
+                ->whereIn('materia_id', $materiasDelGrupo)
+                ->get()
+                ->map(fn ($libro) => [
+                    'id' => $libro->id,
+                    'titulo' => $libro->titulo,
+                    'materia' => $libro->materia?->nombre,
+                    'url' => asset('storage/' . $libro->archivo_path),
+                ])
+                ->values();
+        } else {
+            // Si no tiene grupo asignado, mostrar todos los libros disponibles
+            $libros = \App\Models\GestionAcademica\Libro::with('materia')
+                ->get()
+                ->map(fn ($libro) => [
+                    'id' => $libro->id,
+                    'titulo' => $libro->titulo,
+                    'materia' => $libro->materia?->nombre,
+                    'url' => asset('storage/' . $libro->archivo_path),
+                ])
+                ->values();
+        }
 
         return response()->json([
             'ok' => true,
@@ -261,12 +284,7 @@ class DashboardController extends Controller
                 ])->values() ?? [],
                 'examen_cup' => $resumenCup['examen_cup'],
                 'materias_cup' => $resumenCup['materias_cup'],
-                'libros' => \App\Models\GestionAcademica\Libro::with('materia')->get()->map(fn ($libro) => [
-                    'id' => $libro->id,
-                    'titulo' => $libro->titulo,
-                    'materia' => $libro->materia?->nombre,
-                    'url' => asset('storage/' . $libro->archivo_path),
-                ])->values(),
+                'libros' => $libros,
                 'resultado' => $inscripcion?->resultadoCup,
                 'asignacion_carrera' => $inscripcion?->asignacionCarrera ? [
                     'estado' => $inscripcion->asignacionCarrera->estado,

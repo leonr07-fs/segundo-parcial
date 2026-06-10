@@ -199,16 +199,9 @@ class LoginService
             );
         }
 
-        if ($inscripcionVigente->resultadoCup?->estado_final === 'reprobado') {
-            $this->auditLogService->record('auth.login.reprobado', $user, $request, [
-                'inscripcion_id' => $inscripcionVigente->id,
-            ]);
-
-            throw new HttpException(
-                403,
-                'Su gestion fue reprobada. Debe realizar una repostulacion desde la pagina inicial.'
-            );
-        }
+        // Validación de estado_final removida: todo postulante con inscripción vigente puede acceder
+        // independientemente del resultado del examen (aprobado, reprobado, pendiente, etc.)
+        // La única restricción es que la gestión esté vigente (no cerrada final).
     }
 
     private function ensureDocenteGestionAccesible(User $user, Request $request): void

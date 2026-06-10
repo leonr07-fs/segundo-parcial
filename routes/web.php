@@ -32,6 +32,7 @@ Route::post('/api/solicitudes-docentes', [\App\Http\Controllers\GruposDocentes\S
 /* Consulta pública de estado de postulación (sin auth) */
 Route::view('/consulta-postulacion', 'app')->name('consulta-postulacion');
 Route::get('/api/consulta-postulacion/{ci}', [\App\Http\Controllers\PortalPostulante\ConsultaPostulacionController::class, 'consultar'])->name('api.consulta-postulacion');
+Route::get('/api/consulta-postulacion/{ci}/libros', [\App\Http\Controllers\PortalPostulante\ConsultaPostulacionController::class, 'obtenerLibros'])->name('api.consulta-postulacion.libros');
 Route::post('/api/public/paypal/create-order', [\App\Http\Controllers\PortalPostulante\ConsultaPostulacionController::class, 'createOrder'])->name('api.public.paypal.create-order');
 Route::post('/api/public/paypal/capture-order', [\App\Http\Controllers\PortalPostulante\ConsultaPostulacionController::class, 'captureOrder'])->name('api.public.paypal.capture-order');
 
@@ -78,6 +79,7 @@ Route::middleware(['auth', 'role:admin,autoridad,coordinador'])->group(function 
     Route::post('/api/gestiones', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'store'])->name('api.gestiones.store');
     Route::put('/api/gestiones/{id}/habilitar', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'habilitar'])->name('api.gestiones.habilitar');
     Route::put('/api/gestiones/{id}/cerrar', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'cerrar'])->middleware('role:admin')->name('api.gestiones.cerrar');
+    Route::put('/api/gestiones/{id}/reabrir-inscripciones', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'reabrirInscripciones'])->middleware('role:admin')->name('api.gestiones.reabrir_inscripciones');
     Route::put('/api/gestiones/{id}/cerrar-final', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'cerrarFinal'])->middleware('role:admin')->name('api.gestiones.cerrar_final');
 
     /* CU08 - Parametrizar y gestionar materia, grupo y aula */

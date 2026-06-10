@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\InscripcionPagos\Inscripcion;
+use App\Models\InscripcionPagos\Postulante;
 use App\Models\Seguridad\User;
 use App\Models\GestionAcademica\Gestion;
 use App\Models\GestionAcademica\Aula;
@@ -133,6 +135,79 @@ class ParametrosTest extends TestCase
             'id' => $gestion->id,
             'estado' => GestionState::CERRADA,
         ]);
+    }
+
+    public function test_admin_puede_reabrir_inscripciones_de_la_gestion_vigente(): void
+    {
+        $gestion = Gestion::factory()->inhabilitada()->create();
+
+        $response = $this->actingAs($this->adminUser)->putJson("/api/gestiones/{$gestion->id}/reabrir-inscripciones");
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.gestion.estado', GestionState::INSCRIPCION);
+
+        $this->assertDatabaseHas('gestiones', [
+            'id' => $gestion->id,
+            'estado' => GestionState::INSCRIPCION,
+        ]);
+    }
+
+    public function test_reabrir_inscripciones_mantiene_inscripciones_existentes_y_permite_cerrar_nuevamente(): void
+    {
+        $gestion = Gestion::factory()->inhabilitada()->create();
+        $postulante = Postulante::factory()->create();
+        $inscripcion = Inscripcion::factory()->create([
+            'gestion_id' => $gestion->id,
+            'postulante_id' => $postulante->id,
+        ]);
+
+        $this->actingAs($this->adminUser)
+            ->putJson("/api/gestiones/{$gestion->id}/reabrir-inscripciones")
+            ->assertOk();
+
+        $this->assertDatabaseHas('inscripciones', ['id' => $inscripcion->id]);
+
+        $this->actingAs($this->adminUser)
+            ->putJson("/api/gestiones/{$gestion->id}/cerrar")
+            ->assertOk()
+            ->assertJsonPath('data.gestion.estado', GestionState::INHABILITADA);
+
+        $this->assertDatabaseHas('inscripciones', ['id' => $inscripcion->id]);
+        $this->assertDatabaseHas('gestiones', [
+            'id' => $gestion->id,
+            'estado' => GestionState::INHABILITADA,
+        ]);
+    }
+
+    public function test_no_permite_reabrir_inscripciones_si_la_gestion_no_es_vigente(): void
+    {
+        $gestionVigente = Gestion::factory()->inhabilitada()->create();
+        $gestionCerrada = Gestion::factory()->create(['estado' => GestionState::CERRADA]);
+
+        $this->actingAs($this->adminUser)
+            ->putJson("/api/gestiones/{$gestionCerrada->id}/reabrir-inscripciones")
+            ->assertStatus(422)
+            ->assertJsonPath('ok', false);
+
+        $this->assertDatabaseHas('gestiones', [
+            'id' => $gestionVigente->id,
+            'estado' => GestionState::INHABILITADA,
+        ]);
+        $this->assertDatabaseHas('gestiones', [
+            'id' => $gestionCerrada->id,
+            'estado' => GestionState::CERRADA,
+        ]);
+    }
+
+    public function test_listado_de_gestiones_incluye_gestion_vigente_id(): void
+    {
+        $gestion = Gestion::factory()->inhabilitada()->create();
+
+        $response = $this->actingAs($this->adminUser)->getJson('/api/gestiones');
+
+        $response->assertOk()
+            ->assertJsonPath('data.gestion_vigente_id', $gestion->id);
     }
 
     public function test_admin_puede_crear_aula(): void

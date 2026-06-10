@@ -76,14 +76,21 @@
                   {{ g.estado }}
                 </span>
               </td>
-              <td class="px-6 py-4">
+              <td class="px-6 py-4 space-x-2">
                 <button v-if="g.estado !== 'inscripcion' && g.estado !== 'cerrada' && g.estado !== 'inhabilitada' && g.estado !== 'en_curso'" @click="habilitarGestion(g.id)" class="text-sm bg-indigo-50 text-indigo-600 px-3 py-1 rounded border border-indigo-200 hover:bg-indigo-100 font-medium">
                   Habilitar Inscripciones
                 </button>
-                <button v-if="g.estado === 'inscripcion'" @click="cerrarGestion(g.id)" class="ml-2 text-sm bg-amber-50 text-amber-700 px-3 py-1 rounded border border-amber-200 hover:bg-amber-100 font-medium">
+                <button
+                  v-if="esAdmin && puedeReabrirInscripciones(g)"
+                  @click="reabrirInscripciones(g.id)"
+                  class="text-sm bg-emerald-50 text-emerald-700 px-3 py-1 rounded border border-emerald-200 hover:bg-emerald-100 font-medium"
+                >
+                  Reabrir Inscripciones
+                </button>
+                <button v-if="g.estado === 'inscripcion' && g.id === gestionVigenteId" @click="cerrarGestion(g.id)" class="text-sm bg-amber-50 text-amber-700 px-3 py-1 rounded border border-amber-200 hover:bg-amber-100 font-medium">
                   Cerrar Inscripciones
                 </button>
-                <button v-if="g.estado === 'inhabilitada' || g.estado === 'en_curso'" @click="cerrarGestionFinal(g.id)" class="ml-2 text-sm bg-red-50 text-red-700 px-3 py-1 rounded border border-red-200 hover:bg-red-100 font-medium">
+                <button v-if="g.estado === 'inhabilitada' || g.estado === 'en_curso'" @click="cerrarGestionFinal(g.id)" class="text-sm bg-red-50 text-red-700 px-3 py-1 rounded border border-red-200 hover:bg-red-100 font-medium">
                   Cerrar Gestion Final
                 </button>
               </td>
@@ -466,10 +473,13 @@
 
 import { computed, ref, onMounted } from 'vue';
 import axios from 'axios';
+import { fetchAuthenticatedUser } from '../../api/auth';
 import { useToast } from '../../api/toast';
 
 const activeTab = ref('Gestiones');
 
+const currentUser = ref(null);
+const gestionVigenteId = ref(null);
 const todasLasGestiones = ref([]);
 const materias = ref([]);
 const aulas = ref([]);
@@ -507,11 +517,19 @@ const nombreGestionPreview = computed(() => {
   return `Semestre ${formGestion.value.periodo} ${formGestion.value.anio}`;
 });
 const materiasActivas = computed(() => materias.value.filter(materia => materia.activa));
+const esAdmin = computed(() => currentUser.value?.role === 'admin');
+
+const puedeReabrirInscripciones = (gestion) => {
+  return gestion.estado === 'inhabilitada' || gestion.estado === 'en_curso';
+};
 
 const cargarTodasLasGestiones = async () => {
   try {
     const { data } = await axios.get('/api/gestiones');
-    if (data.ok) todasLasGestiones.value = data.data.gestiones;
+    if (data.ok) {
+      todasLasGestiones.value = data.data.gestiones;
+      gestionVigenteId.value = data.data.gestion_vigente_id ?? null;
+    }
   } catch (e) {
     console.error('Error cargando gestiones', e);
   }
@@ -547,10 +565,31 @@ const habilitarGestion = async (id) => {
   } catch (e) { toast.error('No se pudo habilitar', e.response?.data?.message || 'Error al habilitar gestion'); }
 };
 
+const reabrirInscripciones = async (id) => {
+  const confirmado = await toast.confirm({
+    title: 'Reabrir inscripciones',
+    message: 'La gestion vigente volvera a aceptar nuevas postulaciones. Las inscripciones existentes se mantienen sin cambios.',
+    confirmText: 'Reabrir inscripciones',
+  });
+
+  if (!confirmado) return;
+
+  try {
+    const { data } = await axios.put(`/api/gestiones/${id}/reabrir-inscripciones`);
+    if (data.ok) {
+      toast.success('Inscripciones reabiertas', data.message);
+      await cargarTodasLasGestiones();
+      await cargarGestiones();
+    }
+  } catch (e) {
+    toast.error('No se pudo reabrir', e.response?.data?.message || 'Error al reabrir inscripciones');
+  }
+};
+
 const cerrarGestion = async (id) => {
   const confirmado = await toast.confirm({
     title: 'Cerrar inscripciones',
-    message: 'La gestion dejara de recibir postulaciones y quedara habilitada para asignacion, horarios y evaluaciones.',
+    message: 'La gestion dejara de recibir postulaciones nuevamente. Las inscripciones ya registradas se conservan.',
     confirmText: 'Cerrar inscripciones',
     tone: 'danger',
   });
@@ -838,7 +877,14 @@ const asignarRezagados = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const payload = await fetchAuthenticatedUser();
+    currentUser.value = payload.data.user;
+  } catch {
+    currentUser.value = null;
+  }
+
   cargarGestiones();
   cargarTodasLasGestiones();
   cargarMaterias();

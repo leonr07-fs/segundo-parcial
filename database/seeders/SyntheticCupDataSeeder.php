@@ -41,26 +41,48 @@ class SyntheticCupDataSeeder extends Seeder
 
     public function run(): void
     {
-        DB::transaction(function () {
-            $now = now();
-            $adminId = $this->adminId($now);
-            $gestionId = $this->gestionId($now);
-            $carreras = $this->carreras($gestionId, $now);
-            $materias = $this->materias($now);
-            $docentes = $this->docentes($now);
-            $grupos = $this->grupos($gestionId, $now);
-            $grupoMaterias = $this->grupoMaterias($grupos, $materias, $docentes, $now);
+        // Remove single long-running transaction to avoid connection timeouts
+        // and long-lived locks when inserting very large synthetic datasets.
+        $now = now();
+        $adminId = $this->adminId($now);
+        $gestionId = $this->gestionId($now);
+        $carreras = $this->carreras($gestionId, $now);
+        $materias = $this->materias($now);
+        $docentes = $this->docentes($now);
+        $grupos = $this->grupos($gestionId, $now);
+        $grupoMaterias = $this->grupoMaterias($grupos, $materias, $docentes, $now);
 
-            $this->horarios($grupos, $grupoMaterias, $now);
-            $postulantes = $this->postulantes($now);
-            $this->usuariosPostulantes($postulantes, $now);
-            $inscripciones = $this->inscripciones($postulantes, $gestionId, $now);
+        // Each step performs its own batched upserts; run sequentially.
+        $this->horarios($grupos, $grupoMaterias, $now);
+        $postulantes = $this->postulantes($now);
+        $this->usuariosPostulantes($postulantes, $now);
+        $inscripciones = $this->inscripciones($postulantes, $gestionId, $now);
 
-            $this->opcionesCarrera($inscripciones, $carreras, $now);
+        $this->opcionesCarrera($inscripciones, $carreras, $now);
+
+        // En modo rápido, omitimos inserciones auxiliares pesadas.
+        if (! $this->isFast()) {
             $this->documentos($inscripciones, $adminId, $now);
             $this->pagos($inscripciones, $adminId, $now);
-            $this->asignarGrupos($inscripciones, $grupos, $now);
-        });
+            $this->evaluaciones($inscripciones, $grupos, $materias, $grupoMaterias, $adminId, $now);
+        }
+
+        $this->asignarGrupos($inscripciones, $grupos, $now);
+    }
+
+    private function isFast(): bool
+    {
+        return filter_var(env('SYNTHETIC_FAST', false), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function totalPostulantes(): int
+    {
+        return (int) env('SYNTHETIC_TOTAL_POSTULANTES', self::TOTAL_POSTULANTES);
+    }
+
+    private function totalDocentes(): int
+    {
+        return (int) env('SYNTHETIC_TOTAL_DOCENTES', self::TOTAL_DOCENTES);
     }
 
     private function adminId($now): int
@@ -165,7 +187,8 @@ class SyntheticCupDataSeeder extends Seeder
         $docentes = [];
         $usuarios = [];
 
-        for ($i = 1; $i <= self::TOTAL_DOCENTES; $i++) {
+        $totalDocentes = $this->totalDocentes();
+        for ($i = 1; $i <= $totalDocentes; $i++) {
             $nombre = $this->pick(array_merge($this->nombresM, $this->nombresH), $i);
             $apellido = $this->pick($this->apellidos, $i) . ' ' . $this->pick($this->apellidos, $i + 4);
             $ci = 'DOC' . $this->pad($i, 5);
@@ -205,7 +228,7 @@ class SyntheticCupDataSeeder extends Seeder
 
     private function grupos(int $gestionId, $now): array
     {
-        $totalGrupos = (int) ceil(self::TOTAL_POSTULANTES / self::CUPO_GRUPO);
+        $totalGrupos = (int) ceil($this->totalPostulantes() / self::CUPO_GRUPO);
         $aulas = [];
         $grupos = [];
 
@@ -320,7 +343,8 @@ class SyntheticCupDataSeeder extends Seeder
     {
         $rows = [];
 
-        for ($i = 1; $i <= self::TOTAL_POSTULANTES; $i++) {
+        $totalPostulantes = $this->totalPostulantes();
+        for ($i = 1; $i <= $totalPostulantes; $i++) {
             $genero = $i % 2 === 0 ? 'masculino' : 'femenino';
             $nombre = $genero === 'masculino' ? $this->pick($this->nombresH, $i) : $this->pick($this->nombresM, $i);
             $paterno = $this->pick($this->apellidos, $i + 1);

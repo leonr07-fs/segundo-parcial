@@ -65,10 +65,8 @@ class GestionVigenteService
             return false;
         }
 
-        if ($inscripcion->resultadoCup?->estado_final === 'reprobado') {
-            return false;
-        }
-
+        // Validación de estado_final removida: postulantes con inscripción vigente pueden acceder
+        // sin importar el resultado del examen (aprobado, reprobado, pendiente, etc.)
         return true;
     }
 

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\GruposDocentes;
 use App\Http\Controllers\Controller;
 
 use App\Models\GestionAcademica\Gestion;
+use App\Services\GestionAcademica\GestionVigenteService;
 use App\Support\States\GestionState;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -24,13 +26,20 @@ use Illuminate\Support\Facades\DB;
  */
 class GestionController extends Controller
 {
-    public function index()
+    public function __construct(private readonly GestionVigenteService $gestionVigenteService)
     {
+    }
+
+    public function index(): JsonResponse
+    {
+        $gestionVigente = $this->gestionVigenteService->actual();
+
         return response()->json([
             'ok' => true,
             'data' => [
-                'gestiones' => Gestion::orderBy('created_at', 'desc')->get()
-            ]
+                'gestiones' => Gestion::orderBy('created_at', 'desc')->get(),
+                'gestion_vigente_id' => $gestionVigente?->id,
+            ],
         ]);
     }
 
@@ -100,6 +109,32 @@ class GestionController extends Controller
         return response()->json([
             'ok' => true,
             'message' => 'La gestion fue cerrada definitivamente. Solo queda disponible para consulta administrativa y reportes.',
+            'data' => [
+                'gestion' => $gestion->fresh(),
+            ],
+        ]);
+    }
+
+    /**
+     * Reabre inscripciones de la gestion especificada sin afectar postulaciones ya registradas.
+     */
+    public function reabrirInscripciones(int $id): JsonResponse
+    {
+        $gestion = Gestion::findOrFail($id);
+
+        if (! in_array($gestion->estado, [GestionState::INHABILITADA, GestionState::EN_CURSO], true)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'La gestion no admite reapertura de inscripciones en su estado actual.',
+                'errors' => [],
+            ], 422);
+        }
+
+        $gestion->update(['estado' => GestionState::INSCRIPCION]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Las inscripciones fueron reabiertas. Los postulantes pueden enviar nuevas solicitudes.',
             'data' => [
                 'gestion' => $gestion->fresh(),
             ],
