@@ -154,14 +154,14 @@ php artisan test --filter=AsignacionAutomaticaTest
 
 ## Pasarela De Pago
 
-La integracion con Libelula esta planificada como fase final. El flujo definido es:
+La integracion con Paypal esta planificada como fase final. El flujo definido es:
 
 - Primero se valida la documentacion.
-- Luego se genera la orden, link o QR de pago.
-- Despues se confirma el pago.
-- Finalmente se generan credenciales.
+- Luego se genera la orden, transacción.
+- Despues se confirma el pago .
+- Finalmente se envia mail con credenciales y resivo de pago.
 
-El detalle esta documentado en `docs/PLAN_PASARELA_PAGO_LIBELULA.md`.
+El detalle esta documentado en `docs/IMPLEMENTACION_PAYPAL_STATUS.md
 
 ## Estado Del Proyecto
 
