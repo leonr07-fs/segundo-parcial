@@ -6,6 +6,14 @@ use App\Models\ReportesAuditoria\AuditLog;
 use App\Models\Seguridad\User;
 use Illuminate\Http\Request;
 
+/**
+ * CU07 - Gestionar usuarios, roles y bitácora
+ *
+ * Participantes del CU07 (Diagrama de Secuencia):
+ * - Control: AuditLogController
+ * - Control: AuditLogService (Actual)
+ * - Entity: AuditLog
+ */
 class AuditLogService
 {
     /**

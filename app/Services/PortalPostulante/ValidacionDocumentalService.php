@@ -20,6 +20,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
+/**
+ * CU03 - Validar requisitos documentales
+ * Servicio para registrar la validación documental y cambiar estado de inscripciones.
+ *
+ * Participantes del CU03 (Diagrama de Secuencia):
+ * - Control: ValidacionDocumentalController
+ * - Control: ValidacionDocumentalService (Actual)
+ * - Entity: Documento, ValidacionDocumental, Inscripcion
+ * - Control: AuditLogService
+ */
 class ValidacionDocumentalService
 {
     public function __construct(
@@ -205,9 +215,22 @@ class ValidacionDocumentalService
                 $inscripcion->update(['estado' => $nuevoEstadoInscripcion]);
             }
 
+            // 5. Envío de Correo si la documentación fue observada o rechazada (CU03 - Regla Subsanación)
+            if ($estadoValidacion === ValidacionDocumentalState::OBSERVADA || $estadoValidacion === ValidacionDocumentalState::RECHAZADA) {
+                // Filtramos solo los documentos que fallaron para incluirlos en el correo
+                $documentosProblematicos = $inscripcion->documentos->filter(function ($doc) {
+                    return $doc->estado === 'rechazado' || $doc->estado === 'observado';
+                });
+
+                if ($documentosProblematicos->isNotEmpty()) {
+                    \Illuminate\Support\Facades\Mail::to($inscripcion->postulante->correo)
+                        ->queue(new \App\Mail\DocumentacionObservadaMail($inscripcion, $documentosProblematicos));
+                }
+            }
+
             $credenciales = null;
 
-            // 5. Registrar auditoría
+            // 6. Registrar auditoría
             $this->auditLogService->record(
                 'validacion.documental.completada',
                 $user,

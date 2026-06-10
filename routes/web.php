@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\SeguridadUsuarios\AuthenticatedSessionController;
+use App\Http\Controllers\SeguridadUsuarios\PasswordController;
 use App\Http\Controllers\ReportesExportaciones\DashboardController;
-use App\Http\Controllers\PortalPostulante\PostulacionController;
+use App\Http\Controllers\PostulantesInscripcion\PostulacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'app')->name('home');
@@ -38,10 +38,10 @@ Route::post('/api/public/paypal/capture-order', [\App\Http\Controllers\PortalPos
 
 /* CU06 - Repostulación pública (sin auth) */
 Route::view('/repostulacion', 'app')->name('repostulacion');
-Route::post('/api/public/repostulacion/validar', [\App\Http\Controllers\PortalPostulante\RepostulacionPublicaController::class, 'validar'])->name('api.public.repostulacion.validar');
-Route::post('/api/public/repostulacion/preparar', [\App\Http\Controllers\PortalPostulante\RepostulacionPublicaController::class, 'preparar'])->name('api.public.repostulacion.preparar');
-Route::post('/api/public/repostulacion/paypal/create-order', [\App\Http\Controllers\PortalPostulante\RepostulacionPublicaController::class, 'createOrder'])->name('api.public.repostulacion.paypal.create-order');
-Route::post('/api/public/repostulacion/paypal/capture-order', [\App\Http\Controllers\PortalPostulante\RepostulacionPublicaController::class, 'captureOrder'])->name('api.public.repostulacion.paypal.capture-order');
+Route::post('/api/public/repostulacion/validar', [\App\Http\Controllers\PostulantesInscripcion\RepostulacionPublicaController::class, 'validar'])->name('api.public.repostulacion.validar');
+Route::post('/api/public/repostulacion/preparar', [\App\Http\Controllers\PostulantesInscripcion\RepostulacionPublicaController::class, 'preparar'])->name('api.public.repostulacion.preparar');
+Route::post('/api/public/repostulacion/paypal/create-order', [\App\Http\Controllers\PostulantesInscripcion\RepostulacionPublicaController::class, 'createOrder'])->name('api.public.repostulacion.paypal.create-order');
+Route::post('/api/public/repostulacion/paypal/capture-order', [\App\Http\Controllers\PostulantesInscripcion\RepostulacionPublicaController::class, 'captureOrder'])->name('api.public.repostulacion.paypal.capture-order');
 
 /* Repostulación docente pública */
 Route::view('/repostulacion-docente', 'app')->name('repostulacion-docente');
@@ -68,26 +68,26 @@ Route::middleware(['auth', 'role:admin,autoridad,coordinador'])->group(function 
     /* CU05 - Buscar, consultar y actualizar postulante */
     Route::view('/admin/postulantes', 'app')->name('admin.postulantes');
     Route::view('/admin/postulantes/{id}', 'app')->name('admin.postulantes.detalle');
-    Route::get('/api/admin/postulantes', [\App\Http\Controllers\GestionAcademica\AdminPostulanteController::class, 'index'])->name('api.admin.postulantes.index');
-    Route::get('/api/admin/postulantes/{id}', [\App\Http\Controllers\GestionAcademica\AdminPostulanteController::class, 'show'])->name('api.admin.postulantes.show');
-    Route::put('/api/admin/postulantes/{id}', [\App\Http\Controllers\GestionAcademica\AdminPostulanteController::class, 'update'])->middleware('role:admin')->name('api.admin.postulantes.update');
-    Route::post('/api/admin/postulantes/{postulanteId}/inscripciones/{inscripcionId}/anular', [\App\Http\Controllers\GestionAcademica\AdminPostulanteController::class, 'anularInscripcion'])->middleware('role:admin')->name('api.admin.postulantes.inscripciones.anular');
+    Route::get('/api/admin/postulantes', [\App\Http\Controllers\PostulantesInscripcion\AdminPostulanteController::class, 'index'])->name('api.admin.postulantes.index');
+    Route::get('/api/admin/postulantes/{id}', [\App\Http\Controllers\PostulantesInscripcion\AdminPostulanteController::class, 'show'])->name('api.admin.postulantes.show');
+    Route::put('/api/admin/postulantes/{id}', [\App\Http\Controllers\PostulantesInscripcion\AdminPostulanteController::class, 'update'])->middleware('role:admin')->name('api.admin.postulantes.update');
+    Route::post('/api/admin/postulantes/{postulanteId}/inscripciones/{inscripcionId}/anular', [\App\Http\Controllers\PostulantesInscripcion\AdminPostulanteController::class, 'anularInscripcion'])->middleware('role:admin')->name('api.admin.postulantes.inscripciones.anular');
 
     /* Gestiones */
-    Route::get('/api/gestiones', [\App\Http\Controllers\GestionAcademica\GestionController::class, 'index'])->name('api.gestiones.index');
-    Route::post('/api/gestiones', [\App\Http\Controllers\GestionAcademica\GestionController::class, 'store'])->name('api.gestiones.store');
-    Route::put('/api/gestiones/{id}/habilitar', [\App\Http\Controllers\GestionAcademica\GestionController::class, 'habilitar'])->name('api.gestiones.habilitar');
-    Route::put('/api/gestiones/{id}/cerrar', [\App\Http\Controllers\GestionAcademica\GestionController::class, 'cerrar'])->middleware('role:admin')->name('api.gestiones.cerrar');
-    Route::put('/api/gestiones/{id}/cerrar-final', [\App\Http\Controllers\GestionAcademica\GestionController::class, 'cerrarFinal'])->middleware('role:admin')->name('api.gestiones.cerrar_final');
+    Route::get('/api/gestiones', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'index'])->name('api.gestiones.index');
+    Route::post('/api/gestiones', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'store'])->name('api.gestiones.store');
+    Route::put('/api/gestiones/{id}/habilitar', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'habilitar'])->name('api.gestiones.habilitar');
+    Route::put('/api/gestiones/{id}/cerrar', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'cerrar'])->middleware('role:admin')->name('api.gestiones.cerrar');
+    Route::put('/api/gestiones/{id}/cerrar-final', [\App\Http\Controllers\GruposDocentes\GestionController::class, 'cerrarFinal'])->middleware('role:admin')->name('api.gestiones.cerrar_final');
 
     /* CU08 - Parametrizar y gestionar materia, grupo y aula */
     Route::view('/admin/parametros', 'app')->name('admin.parametros');
-    Route::get('/api/materias', [\App\Http\Controllers\GestionAcademica\MateriaController::class, 'index'])->name('api.materias.index');
-    Route::post('/api/materias', [\App\Http\Controllers\GestionAcademica\MateriaController::class, 'store'])->name('api.materias.store');
-    Route::put('/api/materias/{id}/estado', [\App\Http\Controllers\GestionAcademica\MateriaController::class, 'actualizarEstado'])->middleware('role:admin')->name('api.materias.estado');
-    Route::get('/api/aulas', [\App\Http\Controllers\GestionAcademica\AulaController::class, 'index'])->name('api.aulas.index');
-    Route::post('/api/aulas', [\App\Http\Controllers\GestionAcademica\AulaController::class, 'store'])->name('api.aulas.store');
-    Route::put('/api/aulas/{id}/capacidad', [\App\Http\Controllers\GestionAcademica\AulaController::class, 'actualizarCapacidad'])->middleware('role:admin')->name('api.aulas.capacidad');
+    Route::get('/api/materias', [\App\Http\Controllers\GruposDocentes\MateriaController::class, 'index'])->name('api.materias.index');
+    Route::post('/api/materias', [\App\Http\Controllers\GruposDocentes\MateriaController::class, 'store'])->name('api.materias.store');
+    Route::put('/api/materias/{id}/estado', [\App\Http\Controllers\GruposDocentes\MateriaController::class, 'actualizarEstado'])->middleware('role:admin')->name('api.materias.estado');
+    Route::get('/api/aulas', [\App\Http\Controllers\GruposDocentes\AulaController::class, 'index'])->name('api.aulas.index');
+    Route::post('/api/aulas', [\App\Http\Controllers\GruposDocentes\AulaController::class, 'store'])->name('api.aulas.store');
+    Route::put('/api/aulas/{id}/capacidad', [\App\Http\Controllers\GruposDocentes\AulaController::class, 'actualizarCapacidad'])->middleware('role:admin')->name('api.aulas.capacidad');
     Route::get('/api/grupos', [\App\Http\Controllers\GruposDocentes\GrupoController::class, 'index'])->name('api.grupos.index');
     Route::post('/api/grupos', [\App\Http\Controllers\GruposDocentes\GrupoController::class, 'store'])->name('api.grupos.store');
 
@@ -98,10 +98,12 @@ Route::middleware(['auth', 'role:admin,autoridad,coordinador'])->group(function 
     Route::post('/api/grupos/{grupo}/materias', [\App\Http\Controllers\GruposDocentes\GrupoMateriaController::class, 'store'])->name('api.grupos.materias.store');
     Route::post('/api/asignacion-automatica/generar', [\App\Http\Controllers\GruposDocentes\AsignacionAutomaticaController::class, 'generar'])->middleware('role:admin')->name('api.asignacion-automatica.generar');
     Route::post('/api/asignacion-automatica/confirmar', [\App\Http\Controllers\GruposDocentes\AsignacionAutomaticaController::class, 'confirmar'])->middleware('role:admin')->name('api.asignacion-automatica.confirmar');
+    Route::post('/api/asignacion-automatica/rezagados', [\App\Http\Controllers\GruposDocentes\AsignacionAutomaticaController::class, 'rellenarRezagados'])->middleware('role:admin')->name('api.asignacion-automatica.rezagados');
 
     /* CU14 y CU15 - Consultar y Exportar Evaluaciones */
     Route::view('/admin/notas', 'app')->name('admin.notas');
     Route::get('/api/evaluaciones/grupo-materia/{id}', [\App\Http\Controllers\GestionAcademica\EvaluacionController::class, 'porGrupoMateria'])->name('api.evaluaciones.grupo_materia');
+    Route::put('/api/evaluaciones/manual', [\App\Http\Controllers\GestionAcademica\EvaluacionController::class, 'actualizarManual'])->middleware('role:admin')->name('api.evaluaciones.manual');
     Route::get('/api/reportes/evaluaciones/{id}/exportar', [\App\Http\Controllers\GestionAcademica\EvaluacionController::class, 'exportarActa'])->name('api.evaluaciones.exportar');
 
     /* Reportes y Exportaciones */
@@ -113,18 +115,18 @@ Route::middleware(['auth', 'role:admin,autoridad,coordinador'])->group(function 
     /* CU03 - Validar Requisitos Documentales */
     Route::view('/admin/validacion-documental', 'app')->name('admin.validacion-documental');
     Route::view('/admin/validacion-documental/{id}', 'app')->name('admin.validacion-documental.detalle');
-    Route::get('/api/inscripciones/pendientes-validacion', [\App\Http\Controllers\PortalPostulante\ValidacionDocumentalController::class, 'index'])->name('api.validacion-documental.index');
-    Route::get('/api/inscripciones/{id}/documentos', [\App\Http\Controllers\PortalPostulante\ValidacionDocumentalController::class, 'show'])->name('api.validacion-documental.show');
-    Route::post('/api/inscripciones/{id}/documentos/validar', [\App\Http\Controllers\PortalPostulante\ValidacionDocumentalController::class, 'store'])->middleware('role:admin')->name('api.validacion-documental.store');
-    Route::get('/api/documentos-postulante/{documento}/archivo', [\App\Http\Controllers\Documentos\DocumentoArchivoController::class, 'postulante'])->name('api.documentos.postulante.archivo');
-    Route::get('/api/documentos-docentes/{documento}/archivo', [\App\Http\Controllers\Documentos\DocumentoArchivoController::class, 'docente'])->name('api.documentos.docente.archivo');
+    Route::get('/api/inscripciones/pendientes-validacion', [\App\Http\Controllers\PostulantesInscripcion\ValidacionDocumentalController::class, 'index'])->name('api.validacion-documental.index');
+    Route::get('/api/inscripciones/{id}/documentos', [\App\Http\Controllers\PostulantesInscripcion\ValidacionDocumentalController::class, 'show'])->name('api.validacion-documental.show');
+    Route::post('/api/inscripciones/{id}/documentos/validar', [\App\Http\Controllers\PostulantesInscripcion\ValidacionDocumentalController::class, 'store'])->middleware('role:admin')->name('api.validacion-documental.store');
+    Route::get('/api/documentos-postulante/{documento}/archivo', [\App\Http\Controllers\PostulantesInscripcion\DocumentoArchivoController::class, 'postulante'])->name('api.documentos.postulante.archivo');
+    Route::get('/api/documentos-docentes/{documento}/archivo', [\App\Http\Controllers\PostulantesInscripcion\DocumentoArchivoController::class, 'docente'])->name('api.documentos.docente.archivo');
 
     /* CU04 - Registrar Pago */
     Route::view('/admin/pagos', 'app')->name('admin.pagos');
     Route::view('/admin/pagos/{id}', 'app')->name('admin.pagos.detalle');
-    Route::get('/api/inscripciones/pendientes-pago', [\App\Http\Controllers\PortalPostulante\PagoController::class, 'index'])->name('api.pagos.index');
-    Route::post('/api/inscripciones/{id}/pagos', [\App\Http\Controllers\PortalPostulante\PagoController::class, 'store'])->middleware('role:admin')->name('api.pagos.store');
-    Route::get('/api/inscripciones/{id}/pagos', [\App\Http\Controllers\PortalPostulante\PagoController::class, 'show'])->name('api.pagos.show');
+    Route::get('/api/inscripciones/pendientes-pago', [\App\Http\Controllers\PostulantesInscripcion\PagoController::class, 'index'])->name('api.pagos.index');
+    Route::post('/api/inscripciones/{id}/pagos', [\App\Http\Controllers\PostulantesInscripcion\PagoController::class, 'store'])->middleware('role:admin')->name('api.pagos.store');
+    Route::get('/api/inscripciones/{id}/pagos', [\App\Http\Controllers\PostulantesInscripcion\PagoController::class, 'show'])->name('api.pagos.show');
 
     /* CU09 - Importar Resultados Académicos */
     Route::view('/admin/evaluaciones/importar', 'app')->name('admin.evaluaciones.importar');
@@ -152,10 +154,10 @@ Route::get('/api/admin/asistencias', [\App\Http\Controllers\GruposDocentes\Asist
 Route::get('/api/postulante/academico', [DashboardController::class, 'postulante'])->middleware(['auth', 'role:postulante'])->name('api.postulante.academico');
 
 /* Integración PayPal */
-Route::post('/api/pagos/paypal/create-order', [\App\Http\Controllers\PortalPostulante\PayPalController::class, 'createOrder'])->middleware(['auth', 'role:postulante'])->name('api.paypal.create-order');
-Route::post('/api/pagos/paypal/capture-order', [\App\Http\Controllers\PortalPostulante\PayPalController::class, 'captureOrder'])->middleware(['auth', 'role:postulante'])->name('api.paypal.capture-order');
+Route::post('/api/pagos/paypal/create-order', [\App\Http\Controllers\PostulantesInscripcion\PayPalController::class, 'createOrder'])->middleware(['auth', 'role:postulante'])->name('api.paypal.create-order');
+Route::post('/api/pagos/paypal/capture-order', [\App\Http\Controllers\PostulantesInscripcion\PayPalController::class, 'captureOrder'])->middleware(['auth', 'role:postulante'])->name('api.paypal.capture-order');
 
 /* Webhook (sin Auth) pero validado criptográficamente o excluído de CSRF */
 // NOTA: Como todo está en web.php con middleware web por defecto, el webhook necesita estar fuera de VerifyCsrfToken.
 // Por lo tanto, agregaremos el route. O lo ideal sería configurar VerifyCsrfToken.php.
-Route::post('/api/webhooks/paypal', [\App\Http\Controllers\PortalPostulante\PayPalController::class, 'webhook'])->name('api.paypal.webhook');
+Route::post('/api/webhooks/paypal', [\App\Http\Controllers\PostulantesInscripcion\PayPalController::class, 'webhook'])->name('api.paypal.webhook');

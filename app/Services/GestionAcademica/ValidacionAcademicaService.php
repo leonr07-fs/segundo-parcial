@@ -10,6 +10,14 @@ use App\Support\States\EvaluacionState;
  * CU11 - Calcular promedio final y determinar estado
  * Evalúa notas de exámenes, calcula promedio parcial y determina estados de evaluación.
  */
+/**
+ * CU10, CU11 - Validar reglas académicas y Calcular promedio final
+ *
+ * Participantes (Diagrama de Secuencia):
+ * - Control: ValidacionAcademicaController
+ * - Control: ValidacionAcademicaService (Actual)
+ * - Entity: Evaluacion, Inscripcion
+ */
 class ValidacionAcademicaService
 {
     /**

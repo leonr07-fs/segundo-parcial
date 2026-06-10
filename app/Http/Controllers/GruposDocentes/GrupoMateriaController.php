@@ -13,6 +13,16 @@ use Illuminate\Http\Request;
  * Vinculación UML: Asignación manual de planificación académica (horarios presenciales y virtuales).
  */
 
+/**
+ * CU15 - Registrar asistencia docente (y asignar materias)
+ *
+ * Participantes del CU15 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_AsignacionMateriaGrupo (Vue)
+ * - Control: GrupoMateriaController (Actual)
+ * - Control: ParametrizacionService
+ * - Entity: GrupoMateria, Horario
+ */
 class GrupoMateriaController extends Controller
 {
     public function __construct(private readonly ParametrizacionService $parametrizacionService)

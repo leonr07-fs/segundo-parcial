@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Documentos;
+namespace App\Http\Controllers\PostulantesInscripcion;
 
 use App\Http\Controllers\Controller;
 use App\Models\Docentes\DocumentoDocente;

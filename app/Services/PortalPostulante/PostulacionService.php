@@ -21,6 +21,12 @@ use Illuminate\Validation\ValidationException;
 /**
  * CU02 - Registrar postulación CUP
  * Servicio que procesa la creación de postulantes, opciones de carrera y la inscripción en la gestión vigente.
+ *
+ * Participantes del CU02 (Diagrama de Secuencia):
+ * - Control: PostulacionController
+ * - Control: PostulacionService (Actual)
+ * - Entity: Postulante, Inscripcion, OpcionCarrera, Documento
+ * - Control: AuditLogService
  */
 class PostulacionService
 {

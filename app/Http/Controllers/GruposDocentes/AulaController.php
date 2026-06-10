@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\GestionAcademica;
+namespace App\Http\Controllers\GruposDocentes;
 
 use App\Http\Controllers\Controller;
 

@@ -19,6 +19,14 @@ use Illuminate\Support\Collection;
 
 use App\Services\GestionAcademica\GestionVigenteService;
 
+/**
+ * CU16, CU18 - Reportes Estáticos y Dinámicos
+ *
+ * Participantes (Diagrama de Secuencia):
+ * - Control: DashboardController / ReporteController
+ * - Control: ReporteService (Actual)
+ * - Entity: Evaluacion, Grupo
+ */
 class ReporteService
 {
     public function __construct(private readonly GestionVigenteService $gestionVigenteService)

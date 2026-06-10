@@ -20,6 +20,13 @@ use Illuminate\Support\Facades\Mail;
  * Vinculación UML: Servicio de configuración de materias, aulas y asignación de horarios/docentes.
  */
 
+/**
+ * CU08, CU14, CU15 - Parametrización y Docentes
+ *
+ * Participantes (Diagrama de Secuencia):
+ * - Control: ParametrizacionService (Actual)
+ * - Entity: Gestion, Aula, Materia, Docente, GrupoMateria, Horario
+ */
 class ParametrizacionService
 {
     public function __construct(private readonly GestionVigenteService $gestionVigenteService)

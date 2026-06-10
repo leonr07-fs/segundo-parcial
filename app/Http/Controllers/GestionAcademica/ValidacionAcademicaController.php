@@ -12,6 +12,16 @@ use Illuminate\Http\Request;
  * CU10 - Validar reglas académicas
  * Permite identificar evaluaciones que requieren supervisión académica y consulta de casos pendientes.
  */
+/**
+ * CU10, CU11 - Validar reglas académicas y Calcular promedio final
+ *
+ * Participantes (Diagrama de Secuencia):
+ * - Actor: Administrador / Sistema (Background Job)
+ * - Boundary: UI_CalculoFinal, Interfaz_BackgroundJob
+ * - Control: ValidacionAcademicaController (Actual)
+ * - Control: ValidacionAcademicaService
+ * - Entity: Evaluacion, Inscripcion
+ */
 class ValidacionAcademicaController extends Controller
 {
     public function __construct(private readonly GestionVigenteService $gestionVigenteService)

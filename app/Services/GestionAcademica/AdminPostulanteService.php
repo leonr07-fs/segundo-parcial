@@ -12,6 +12,14 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU05 - Buscar, consultar y actualizar postulante
+ *
+ * Participantes del CU05 (Diagrama de Secuencia):
+ * - Control: AdminPostulanteController
+ * - Control: AdminPostulanteService (Actual)
+ * - Entity: Postulante, Inscripcion
+ */
 class AdminPostulanteService
 {
     public function __construct(

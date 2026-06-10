@@ -18,6 +18,16 @@ use App\Services\GestionAcademica\GestionVigenteService;
  * Vinculación UML: Permite definir cupos por carrera y ejecutar el algoritmo de asignación de carrera a estudiantes aprobados.
  */
 
+/**
+ * CU12 - Asignar carrera por cupos
+ *
+ * Participantes del CU12 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_AsignacionCarreras (Vue)
+ * - Control: AsignacionCarreraController (Actual)
+ * - Control: AsignacionCarreraService
+ * - Entity: PostulanteCarrera
+ */
 class AsignacionCarreraController extends Controller
 {
     public function __construct(

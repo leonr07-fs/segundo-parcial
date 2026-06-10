@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\PortalPostulante;
+namespace App\Http\Controllers\PostulantesInscripcion;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ValidarRepostulacionPublicaRequest;
@@ -16,6 +16,13 @@ use Illuminate\Http\Request;
 /**
  * CU06 - Habilitar repostulación en nueva gestión
  * Gestiona la validación de elegibilidad y el pago de repostulación para postulantes reprobados.
+ *
+ * Participantes del CU06 (Diagrama de Secuencia):
+ * - Actor: Postulante
+ * - Boundary: UI_Repostulacion (Vue)
+ * - Control: RepostulacionPublicaController (Actual)
+ * - Control: RepostulacionService
+ * - Entity: Inscripcion, Documento
  */
 class RepostulacionPublicaController extends Controller
 {

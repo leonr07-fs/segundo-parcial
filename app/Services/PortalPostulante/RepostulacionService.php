@@ -18,6 +18,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * CU06 - Habilitar repostulación en nueva gestión
  * Servicio para validar la elegibilidad de repostulación y preparar inscripciones de repostulación.
+ *
+ * Participantes del CU06 (Diagrama de Secuencia):
+ * - Control: RepostulacionPublicaController
+ * - Control: RepostulacionService (Actual)
+ * - Entity: Inscripcion, Documento
  */
 class RepostulacionService
 {

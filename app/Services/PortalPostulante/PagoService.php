@@ -20,6 +20,15 @@ use Illuminate\Support\Facades\Mail;
 /**
  * CU04 - Registrar/verificar pago CUP y confirmar inscripción
  * Servicio que valida y registra pagos de inscripciones, genera recibos y emite credenciales de postulante.
+ *
+ * Participantes del CU04 (Diagrama de Secuencia):
+ * - Control: PagoController
+ * - Control: PagoService (Actual)
+ * - Control: GestionVigenteService
+ * - Entity: Inscripcion, Pago, Recibo
+ * - Control: CredentialService
+ * - Entity: User
+ * - Control: AuditLogService
  */
 class PagoService
 {

@@ -49,15 +49,25 @@
             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Examen 3</th>
             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Promedio</th>
             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
           <tr v-for="estudiante in estudiantes" :key="estudiante.inscripcion_id">
             <td class="px-6 py-4 font-medium">{{ estudiante.postulante_ci }}</td>
             <td class="px-6 py-4">{{ estudiante.postulante_nombre }}</td>
-            <td class="px-6 py-4 text-center">{{ estudiante.examen_1 ?? '-' }}</td>
-            <td class="px-6 py-4 text-center">{{ estudiante.examen_2 ?? '-' }}</td>
-            <td class="px-6 py-4 text-center">{{ estudiante.examen_3 ?? '-' }}</td>
+            <td class="px-6 py-4 text-center">
+              <input v-if="editandoEstudiante === estudiante.inscripcion_id" type="number" min="0" max="100" v-model="notasEditadas.examen_1" class="w-16 rounded border-gray-300 px-2 py-1 text-sm text-center" />
+              <span v-else>{{ estudiante.examen_1 ?? '-' }}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <input v-if="editandoEstudiante === estudiante.inscripcion_id" type="number" min="0" max="100" v-model="notasEditadas.examen_2" class="w-16 rounded border-gray-300 px-2 py-1 text-sm text-center" />
+              <span v-else>{{ estudiante.examen_2 ?? '-' }}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <input v-if="editandoEstudiante === estudiante.inscripcion_id" type="number" min="0" max="100" v-model="notasEditadas.examen_3" class="w-16 rounded border-gray-300 px-2 py-1 text-sm text-center" />
+              <span v-else>{{ estudiante.examen_3 ?? '-' }}</span>
+            </td>
             <td class="px-6 py-4 text-center font-bold" :class="getPromedioColor(estudiante.promedio)">
               {{ estudiante.promedio ?? '-' }}
             </td>
@@ -65,6 +75,15 @@
               <span :class="getEstadoBadgeClass(estudiante.estado)">
                 {{ (estudiante.estado || 'pendiente').toUpperCase() }}
               </span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <div v-if="editandoEstudiante === estudiante.inscripcion_id" class="flex justify-center space-x-2">
+                <button @click="guardarNotas(estudiante)" :disabled="actualizando" class="text-green-600 hover:text-green-800 font-medium text-sm disabled:opacity-50">Guardar</button>
+                <button @click="cancelarEdicion" :disabled="actualizando" class="text-gray-500 hover:text-gray-700 font-medium text-sm disabled:opacity-50">Cancelar</button>
+              </div>
+              <button v-else @click="iniciarEdicion(estudiante)" class="text-indigo-600 hover:text-indigo-900 font-medium text-sm">
+                Editar
+              </button>
             </td>
           </tr>
           <tr v-if="!estudiantes.length">
@@ -88,6 +107,9 @@ const grupoMateriaInfo = ref(null);
 
 const grupoSeleccionado = ref('');
 const materiaSeleccionada = ref('');
+const editandoEstudiante = ref(null);
+const notasEditadas = ref({ examen_1: null, examen_2: null, examen_3: null });
+const actualizando = ref(false);
 
 const cargarGrupos = async () => {
   const { data } = await axios.get('/api/grupos');
@@ -110,6 +132,47 @@ const cargarNotas = async () => {
   if (data.ok) {
     grupoMateriaInfo.value = data.data.grupo_materia;
     estudiantes.value = data.data.estudiantes;
+  }
+};
+
+const iniciarEdicion = (estudiante) => {
+  editandoEstudiante.value = estudiante.inscripcion_id;
+  notasEditadas.value = { 
+    examen_1: estudiante.examen_1, 
+    examen_2: estudiante.examen_2, 
+    examen_3: estudiante.examen_3 
+  };
+};
+
+const cancelarEdicion = () => {
+  editandoEstudiante.value = null;
+};
+
+const guardarNotas = async (estudiante) => {
+  actualizando.value = true;
+  try {
+    const response = await axios.put('/api/evaluaciones/manual', {
+      inscripcion_id: estudiante.inscripcion_id,
+      grupo_materia_id: grupoMateriaInfo.value.id,
+      examen_1: notasEditadas.value.examen_1,
+      examen_2: notasEditadas.value.examen_2,
+      examen_3: notasEditadas.value.examen_3,
+    });
+    if (response.data.ok) {
+      // Actualizar la fila con la respuesta del backend
+      estudiante.examen_1 = response.data.data.examen_1;
+      estudiante.examen_2 = response.data.data.examen_2;
+      estudiante.examen_3 = response.data.data.examen_3;
+      estudiante.promedio = response.data.data.promedio;
+      estudiante.estado = response.data.data.estado;
+      
+      editandoEstudiante.value = null;
+      alert('Notas actualizadas exitosamente');
+    }
+  } catch (error) {
+    alert(error.response?.data?.message || 'Error al actualizar las notas.');
+  } finally {
+    actualizando.value = false;
   }
 };
 

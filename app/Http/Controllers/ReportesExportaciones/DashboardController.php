@@ -17,12 +17,23 @@ use App\Services\GruposDocentes\AsistenciaDocenteService;
 use App\Support\States\GestionState;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * [CU16] Consultar carga docente / [CU17] Consultar información postulante / [CU18] Dashboard
  * Vinculación UML: Centraliza el dashboard general administrativo, la carga docente asignada y el portal del postulante.
  */
 
+/**
+ * CU16, CU17 - Dashboard Docente y Postulante
+ *
+ * Participantes (Diagrama de Secuencia):
+ * - Actor: Docente / Postulante
+ * - Boundary: UI_DashboardDocente / UI_DashboardPostulante
+ * - Control: DashboardController (Actual)
+ * - Control: ReporteService / CupExamenService
+ * - Entity: Grupo / Inscripcion
+ */
 class DashboardController extends Controller
 {
     public function __construct(private readonly GestionVigenteService $gestionVigenteService)
@@ -43,6 +54,39 @@ class DashboardController extends Controller
                 ? $query->where('gestion_id', $gestionId)
                 : $query->whereRaw('1 = 0'));
 
+        // ----------------------------------------------------------------------------------
+        // REGLA DE NEGOCIO: Ranking "Top Docentes" (Audio Prof: Min 8:09)
+        // Objetivo: Visualizar qué docente tiene la menor cantidad de aprobados/reprobados
+        // desglosado por grupo, para premiar el rendimiento o monitorear eficacia.
+        // ----------------------------------------------------------------------------------
+        $rankingDocentes = [];
+        if ($gestionId) {
+            $rankingDocentes = DB::table('evaluaciones')
+                // 1. Unimos para saber quién es el docente y de qué grupo es esta evaluación
+                ->join('grupo_materias', 'evaluaciones.grupo_materia_id', '=', 'grupo_materias.id')
+                ->join('docentes', 'grupo_materias.docente_id', '=', 'docentes.id')
+                ->join('grupos', 'grupo_materias.grupo_id', '=', 'grupos.id')
+                // 2. Filtramos estrictamente por la gestión actual
+                ->where('grupos.gestion_id', $gestionId)
+                ->whereNotNull('evaluaciones.promedio')
+                // 3. Calculamos la cantidad de alumnos aprobados (>=60) y reprobados (<60)
+                // Se usa SUM con lógica condicional para evitar subconsultas y mejorar rendimiento
+                ->selectRaw('docentes.id as docente_id, 
+                             docentes.nombres, 
+                             docentes.apellidos, 
+                             grupos.codigo as grupo_codigo,
+                             SUM(CASE WHEN evaluaciones.promedio >= 60 THEN 1 ELSE 0 END) as aprobados,
+                             SUM(CASE WHEN evaluaciones.promedio < 60 THEN 1 ELSE 0 END) as reprobados')
+                // 4. Granularidad: El profesor exigió que la evaluación sea POR GRUPO.
+                // Es decir, si el "Ing. Juan" da 3 grupos, saldrá 3 veces en el ranking.
+                ->groupBy('docentes.id', 'docentes.nombres', 'docentes.apellidos', 'grupos.codigo')
+                // 5. Orden prioritario: Queremos encontrar a quien tiene MENOS REPROVADOS.
+                ->orderBy('reprobados', 'asc')
+                ->orderBy('aprobados', 'desc')
+                ->limit(10)
+                ->get();
+        }
+
         return response()->json([
             'ok' => true,
             'data' => [
@@ -58,6 +102,7 @@ class DashboardController extends Controller
                         ->whereIn('estado', ['pendiente', 'incompleto', 'observado'])
                         ->count(),
                 ],
+                'ranking_docentes_por_grupo' => $rankingDocentes,
             ],
         ]);
     }
@@ -216,6 +261,12 @@ class DashboardController extends Controller
                 ])->values() ?? [],
                 'examen_cup' => $resumenCup['examen_cup'],
                 'materias_cup' => $resumenCup['materias_cup'],
+                'libros' => \App\Models\GestionAcademica\Libro::with('materia')->get()->map(fn ($libro) => [
+                    'id' => $libro->id,
+                    'titulo' => $libro->titulo,
+                    'materia' => $libro->materia?->nombre,
+                    'url' => asset('storage/' . $libro->archivo_path),
+                ])->values(),
                 'resultado' => $inscripcion?->resultadoCup,
                 'asignacion_carrera' => $inscripcion?->asignacionCarrera ? [
                     'estado' => $inscripcion->asignacionCarrera->estado,

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\PortalPostulante;
+namespace App\Http\Controllers\PostulantesInscripcion;
 
 use App\Http\Controllers\Controller;
 
@@ -11,6 +11,14 @@ use Illuminate\Http\JsonResponse;
 /**
  * CU03 - Validar requisitos documentales
  * Permite revisar y aprobar u observar documentos presentados en la inscripción CUP.
+ *
+ * Participantes del CU03 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_ValidacionDocs (Vue)
+ * - Control: ValidacionDocumentalController (Actual)
+ * - Control: ValidacionDocumentalService
+ * - Entity: Documento, ValidacionDocumental, Inscripcion
+ * - Control: AuditLogService
  */
 class ValidacionDocumentalController extends Controller
 {

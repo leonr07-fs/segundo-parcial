@@ -147,7 +147,7 @@ class SolicitudDocenteTest extends TestCase
             'correo' => 'maria@example.test',
             'telefono' => '70000003',
             'materia_id' => $materia->id,
-            'profesion' => 'Ingeniera Comercial',
+            'profesion' => 'Ingeniera Informatica',
             'estado' => 'pendiente',
         ]);
 
@@ -193,7 +193,7 @@ class SolicitudDocenteTest extends TestCase
             'correo' => 'juan@example.test',
             'telefono' => '70000009',
             'materia_id' => $materia->id,
-            'profesion' => 'Licenciado en Lenguas',
+            'profesion' => 'Licenciado en Filologia',
             'estado' => 'pendiente',
         ]);
 
@@ -216,5 +216,51 @@ class SolicitudDocenteTest extends TestCase
             'id' => $solicitud->id,
             'estado' => 'aprobada',
         ]);
+    }
+
+    public function test_rechaza_profesor_por_ser_rango_menor(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $materia = Materia::create(['codigo' => 'ING', 'nombre' => 'Ingles', 'activa' => true]);
+        $solicitud = SolicitudDocente::create([
+            'ci' => '1122340',
+            'nombres' => 'Jose',
+            'correo' => 'jose@example.test',
+            'materia_id' => $materia->id,
+            'profesion' => 'Profesorado en Idioma Ingles',
+            'estado' => 'pendiente',
+        ]);
+
+        foreach (['ci', 'titulo_profesional', 'diplomado', 'maestria', 'cv'] as $tipo) {
+            DocumentoDocente::create(['solicitud_docente_id' => $solicitud->id, 'tipo' => $tipo, 'archivo_path' => "doc.pdf", 'estado' => 'aprobado']);
+        }
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('minimo el grado');
+
+        (new SolicitudDocenteService())->aprobar($solicitud->id, $admin);
+    }
+
+    public function test_rechaza_carrera_economica(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $materia = Materia::create(['codigo' => 'MAT', 'nombre' => 'Matematicas', 'activa' => true]);
+        $solicitud = SolicitudDocente::create([
+            'ci' => '1122341',
+            'nombres' => 'Luis',
+            'correo' => 'luis2@example.test',
+            'materia_id' => $materia->id,
+            'profesion' => 'Ingeniero Comercial',
+            'estado' => 'pendiente',
+        ]);
+
+        foreach (['ci', 'titulo_profesional', 'diplomado', 'maestria', 'cv'] as $tipo) {
+            DocumentoDocente::create(['solicitud_docente_id' => $solicitud->id, 'tipo' => $tipo, 'archivo_path' => "doc.pdf", 'estado' => 'aprobado']);
+        }
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('area economica o con rango de profesor');
+
+        (new SolicitudDocenteService())->aprobar($solicitud->id, $admin);
     }
 }

@@ -29,3 +29,11 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 *.py
+__pycache__/
+*.tmp
+
+# Documentacion y diagramas ignorados
+*.mdj
+diagramas_analisis_clases_png/
+*.md
+!README.md

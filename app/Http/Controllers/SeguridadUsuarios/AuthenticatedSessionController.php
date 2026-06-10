@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers\SeguridadUsuarios;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
@@ -13,6 +13,14 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 /**
  * CU01 - Autenticación de usuario
  * Permite iniciar y cerrar sesión validando credenciales, controlando bloqueos y registrando eventos de acceso.
+ *
+ * Participantes del CU01 (Diagrama de Secuencia):
+ * - Actor: Usuario
+ * - Boundary: UI_Login (Vue)
+ * - Control: AuthenticatedSessionController (Actual)
+ * - Control: LoginService
+ * - Entity: User
+ * - Control: AuditLogService
  */
 class AuthenticatedSessionController extends Controller
 {

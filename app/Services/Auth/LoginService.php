@@ -16,6 +16,12 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 /**
  * CU01: Autenticación de Usuario
  * Servicio encargado de procesar la lógica de negocio para el inicio y cierre de sesión.
+ *
+ * Participantes del CU01 (Diagrama de Secuencia):
+ * - Control: AuthenticatedSessionController
+ * - Control: LoginService (Actual)
+ * - Entity: User
+ * - Control: AuditLogService
  */
 class LoginService
 {

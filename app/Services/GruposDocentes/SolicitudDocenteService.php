@@ -207,22 +207,69 @@ class SolicitudDocenteService
 
         $materiaNombre = strtolower($solicitud->materia?->nombre ?? '');
         $materiaCodigo = strtolower($solicitud->materia?->codigo ?? '');
+
+        // 1. Filtro de Grado Mínimo
+        $tieneGradoMinimo = str_contains($profesion, 'licenciad') 
+            || str_contains($profesion, 'lic.')
+            || str_contains($profesion, 'ingenier')
+            || str_contains($profesion, 'ing.');
+
+        if (!$tieneGradoMinimo) {
+            throw new \DomainException('La profesion debe acreditar que el postulante posee como minimo el grado de Licenciatura o Ingenieria.');
+        }
+
+        // 2. Filtro de Exclusión
+        $exclusiones = ['econom', 'comercial', 'financier', 'administracion', 'auditor', 'contad', 'profesor'];
+        foreach ($exclusiones as $exclusion) {
+            if (str_contains($profesion, $exclusion)) {
+                throw new \DomainException('No se admiten profesionales del area economica o con rango de profesor.');
+            }
+        }
+
+        // 3. Filtro de Afinidad por Materia
+        $esComputacion = str_contains($materiaNombre, 'computacion') || str_contains($materiaNombre, 'computación') || str_contains($materiaCodigo, 'com');
+        $esMatematicas = str_contains($materiaNombre, 'matematica') || str_contains($materiaNombre, 'matemática') || str_contains($materiaCodigo, 'mat');
+        $esFisica = str_contains($materiaNombre, 'fisica') || str_contains($materiaNombre, 'física') || str_contains($materiaCodigo, 'fis');
         $esIngles = str_contains($materiaNombre, 'ingles') || str_contains($materiaNombre, 'inglés') || str_contains($materiaCodigo, 'ing');
 
-        if ($esIngles) {
-            if (! str_contains($profesion, 'licenciad') 
-                && ! str_contains($profesion, 'profesor') 
-                && ! str_contains($profesion, 'docente') 
-                && ! str_contains($profesion, 'ingenier') 
-                && ! str_contains($profesion, 'ing.')
-                && ! str_contains($profesion, 'lic.')
-            ) {
-                throw new \DomainException('La profesion debe acreditar que el postulante es licenciado, profesor o ingeniero para dictar esta materia.');
+        $esAfin = false;
+
+        if ($esComputacion) {
+            $afines = ['sistemas', 'informatic', 'software', 'redes', 'telecomunicacion', 'computacion'];
+            foreach ($afines as $afin) {
+                if (str_contains($profesion, $afin)) {
+                    $esAfin = true;
+                    break;
+                }
             }
-        } else {
-            if (! str_contains($profesion, 'ingenier') && ! str_contains($profesion, 'ing.')) {
-                throw new \DomainException('La profesion debe acreditar que el postulante es ingeniero.');
+            if (!$esAfin) {
+                throw new \DomainException('Para Computacion, la profesion debe ser de una carrera tecnologica pura afin.');
             }
+        } elseif ($esMatematicas) {
+            $afines = ['matematic', 'civil', 'electromecanic', 'industrial', 'sistemas', 'informatic', 'petroler', 'quimic'];
+            foreach ($afines as $afin) {
+                if (str_contains($profesion, $afin)) {
+                    $esAfin = true;
+                    break;
+                }
+            }
+            if (!$esAfin) {
+                throw new \DomainException('Para Matematicas, la profesion debe tener un fuerte tronco matematico afin.');
+            }
+        } elseif ($esFisica) {
+            $afines = ['fisic', 'civil', 'electromecanic', 'industrial', 'mecanic', 'petroler', 'mecatron'];
+            foreach ($afines as $afin) {
+                if (str_contains($profesion, $afin)) {
+                    $esAfin = true;
+                    break;
+                }
+            }
+            if (!$esAfin) {
+                throw new \DomainException('Para Fisica, la profesion debe tener aplicacion fisica intensiva.');
+            }
+        } elseif ($esIngles) {
+            // Para inglés, aceptamos cualquier ingeniero o licenciado (que ya pasó el filtro 1 y 2).
+            $esAfin = true;
         }
 
         $documentos = $solicitud->documentos->keyBy('tipo');

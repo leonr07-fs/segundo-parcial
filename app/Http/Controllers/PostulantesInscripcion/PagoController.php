@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\PortalPostulante;
+namespace App\Http\Controllers\PostulantesInscripcion;
 
 use App\Http\Controllers\Controller;
 
@@ -11,6 +11,17 @@ use Illuminate\Http\JsonResponse;
 /**
  * CU04 - Registrar/verificar pago CUP y confirmar inscripción
  * Permite registrar pagos de inscripciones y confirmar el estado de inscripción cuando el pago es aprobado.
+ *
+ * Participantes del CU04 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_PagoForm (Vue)
+ * - Control: PagoController (Actual)
+ * - Control: PagoService
+ * - Control: GestionVigenteService
+ * - Entity: Inscripcion, Pago, Recibo
+ * - Control: CredentialService
+ * - Entity: User
+ * - Control: AuditLogService
  */
 class PagoController extends Controller
 {

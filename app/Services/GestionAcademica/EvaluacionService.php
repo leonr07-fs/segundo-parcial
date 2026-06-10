@@ -4,6 +4,7 @@ namespace App\Services\GestionAcademica;
 
 use App\Models\EvaluacionesResultados\Evaluacion;
 use App\Models\GestionAcademica\GrupoMateria;
+use App\Services\GestionAcademica\ValidacionAcademicaService;
 
 class EvaluacionService
 {
@@ -45,5 +46,44 @@ class EvaluacionService
             ],
             'estudiantes' => $estudiantes->values(),
         ];
+    }
+
+    /**
+     * [CU09] Actualización Manual de Notas
+     * 
+     * Busca o instancia una Evaluación y actualiza explícitamente los campos de 
+     * examen (1, 2 y/o 3) que se envíen en el arreglo $notas.
+     * Al finalizar la actualización, dispara el ValidacionAcademicaService para que 
+     * se recalcule inmediatamente el promedio y el estado final (aprobado/reprobado/observado).
+     *
+     * @param int $inscripcionId
+     * @param int $grupoMateriaId
+     * @param array $notas Arreglo asociativo con claves 'examen_1', 'examen_2', 'examen_3'
+     * @param int|null $userId ID del usuario administrador que realiza la acción
+     * @return Evaluacion
+     */
+    public function actualizarNotasManuales(int $inscripcionId, int $grupoMateriaId, array $notas, $userId = null)
+    {
+        $evaluacion = Evaluacion::firstOrNew([
+            'inscripcion_id' => $inscripcionId,
+            'grupo_materia_id' => $grupoMateriaId,
+        ]);
+
+        if (array_key_exists('examen_1', $notas)) {
+            $evaluacion->examen_1 = $notas['examen_1'] === '' || $notas['examen_1'] === null ? null : (float)$notas['examen_1'];
+        }
+        if (array_key_exists('examen_2', $notas)) {
+            $evaluacion->examen_2 = $notas['examen_2'] === '' || $notas['examen_2'] === null ? null : (float)$notas['examen_2'];
+        }
+        if (array_key_exists('examen_3', $notas)) {
+            $evaluacion->examen_3 = $notas['examen_3'] === '' || $notas['examen_3'] === null ? null : (float)$notas['examen_3'];
+        }
+
+        $evaluacion->registrado_por = $userId;
+        $evaluacion->registrado_en = now();
+
+        app(ValidacionAcademicaService::class)->validar($evaluacion, true);
+
+        return $evaluacion;
     }
 }

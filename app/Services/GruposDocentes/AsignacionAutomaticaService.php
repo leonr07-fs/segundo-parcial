@@ -17,6 +17,14 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
+/**
+ * CU13 - Asignar grupos, materias, docentes, aulas y horarios
+ *
+ * Participantes del CU13 (Diagrama de Secuencia):
+ * - Control: AsignacionAutomaticaController
+ * - Control: AsignacionAutomaticaService (Actual)
+ * - Entity: Grupo
+ */
 class AsignacionAutomaticaService
 {
     private const MODALIDAD_PRESENCIAL = 'presencial';
@@ -147,6 +155,63 @@ class AsignacionAutomaticaService
                 'grupos_creados' => $gruposCreados,
                 'estudiantes_asignados' => $estudiantesAsignados,
                 'horarios_creados' => $horariosCreados,
+            ];
+        });
+    }
+
+    /**
+     * [CU13] Asignar rezagados a los grupos ya existentes.
+     * Solo funciona si existen grupos creados.
+     * @return array<string, int>
+     */
+    public function asignarRezagados(int $gestionId): array
+    {
+        return DB::transaction(function () use ($gestionId) {
+            $gruposExistentes = Grupo::where('gestion_id', $gestionId)
+                ->where('estado', 'asignado')
+                ->withCount('inscripciones')
+                ->orderBy('codigo')
+                ->get();
+
+            if ($gruposExistentes->isEmpty()) {
+                throw new RuntimeException('No existen grupos generados para esta gestion. Debe generar la asignacion automatica primero.');
+            }
+
+            $inscripcionesRezagadas = $this->inscripcionesAsignables($gestionId);
+
+            if ($inscripcionesRezagadas->isEmpty()) {
+                throw new RuntimeException('No hay postulantes rezagados para asignar (no hay inscripciones pagadas/inscritas sin grupo).');
+            }
+
+            $estudiantesAsignados = 0;
+            $sinCupo = 0;
+
+            foreach ($inscripcionesRezagadas as $inscripcion) {
+                $asignado = false;
+                foreach ($gruposExistentes as $grupo) {
+                    if ($grupo->inscripciones_count < Grupo::CUPO_MAXIMO) {
+                        $grupo->inscripciones()->attach($inscripcion->id, [
+                            'estado' => 'asignado',
+                            'asignado_en' => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $grupo->inscripciones_count++; // Actualizar el contador en memoria
+                        $estudiantesAsignados++;
+                        $asignado = true;
+                        break;
+                    }
+                }
+
+                if (!$asignado) {
+                    $sinCupo++;
+                }
+            }
+
+            return [
+                'total_rezagados' => $inscripcionesRezagadas->count(),
+                'estudiantes_asignados' => $estudiantesAsignados,
+                'sin_cupo' => $sinCupo,
             ];
         });
     }

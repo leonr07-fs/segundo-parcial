@@ -13,6 +13,14 @@ use Illuminate\Support\Str;
  * Vinculación UML: Servicio de consolidación de resultados de exámenes y horarios vigentes para el portal de autoatención.
  */
 
+/**
+ * CU17 - Consultar información académica del postulante
+ *
+ * Participantes del CU17 (Diagrama de Secuencia):
+ * - Control: DashboardController
+ * - Control: CupExamenService (Actual)
+ * - Entity: Inscripcion
+ */
 class CupExamenService
 {
     private const MATERIAS_CUP = [

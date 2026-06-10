@@ -15,6 +15,16 @@ use Illuminate\Http\JsonResponse;
  * Vinculación UML: Carga masiva de notas desde plantillas e interfaces de consulta de actas de notas por grupo y materia.
  */
 
+/**
+ * CU09 - Cargar/importar resultados académicos
+ *
+ * Participantes del CU09 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_ImportacionNotas (Vue)
+ * - Control: EvaluacionController (Actual)
+ * - Control: ImportacionResultadosService
+ * - Entity: Evaluacion
+ */
 class EvaluacionController extends Controller
 {
     public function __construct(
@@ -124,6 +134,66 @@ class EvaluacionController extends Controller
                 'ok' => false,
                 'message' => 'Error al exportar acta: ' . $e->getMessage()
             ], 404);
+        }
+    }
+
+    /**
+     * [CU09] Modificación / Subida Manual de Notas
+     * 
+     * Permite al administrador modificar o cargar manualmente las notas de un estudiante
+     * de forma individual (fila por fila en la vista).
+     * Esta funcionalidad se añadió para proveer una alternativa a la carga masiva por CSV,
+     * permitiendo corregir errores específicos. Las notas enviadas se validan (0-100) 
+     * y la modificación queda registrada en la bitácora de auditoría.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function actualizarManual(\Illuminate\Http\Request $request)
+    {
+        try {
+            $request->validate([
+                'inscripcion_id' => 'required|integer',
+                'grupo_materia_id' => 'required|integer',
+                'examen_1' => 'nullable|numeric|min:0|max:100',
+                'examen_2' => 'nullable|numeric|min:0|max:100',
+                'examen_3' => 'nullable|numeric|min:0|max:100',
+            ]);
+
+            $notas = $request->only(['examen_1', 'examen_2', 'examen_3']);
+            $inscripcionId = $request->input('inscripcion_id');
+            $grupoMateriaId = $request->input('grupo_materia_id');
+
+            $evaluacion = $this->evaluacionService->actualizarNotasManuales(
+                $inscripcionId,
+                $grupoMateriaId,
+                $notas,
+                $request->user()?->id
+            );
+
+            $this->auditLogService->record(
+                'evaluacion.modificacion_manual',
+                $request->user(),
+                $request,
+                [
+                    'inscripcion_id' => $inscripcionId,
+                    'grupo_materia_id' => $grupoMateriaId,
+                    'notas_actualizadas' => $notas,
+                    'nuevo_estado' => $evaluacion->estado,
+                ]
+            );
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Notas actualizadas correctamente',
+                'data' => $evaluacion
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al actualizar notas de forma manual: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

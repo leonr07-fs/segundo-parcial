@@ -13,6 +13,16 @@ use Illuminate\Http\Request;
  * Vinculación UML: Administra el registro de docentes de nivelación y el cumplimiento de sus requisitos habilitantes.
  */
 
+/**
+ * CU14 - Gestionar solicitudes docentes
+ *
+ * Participantes del CU14 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_Docente (Vue)
+ * - Control: DocenteController (Actual)
+ * - Control: ParametrizacionService
+ * - Entity: Docente, User
+ */
 class DocenteController extends Controller
 {
     public function __construct(private readonly ParametrizacionService $parametrizacionService)

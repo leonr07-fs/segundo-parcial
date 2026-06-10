@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\GestionAcademica;
+namespace App\Http\Controllers\GruposDocentes;
 
 use App\Http\Controllers\Controller;
 
@@ -12,6 +12,15 @@ use Illuminate\Support\Facades\DB;
 /**
  * CU08 - Parametrizar gestiones, materias, aulas y grupos
  * Permite gestionar el ciclo académico de gestiones y el estado de inscripciones.
+ */
+/**
+ * CU08 - Parametrizar gestiones, materias, aulas y grupos
+ *
+ * Participantes del CU08 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_Parametrizacion (Vue)
+ * - Control: GestionController (Actual)
+ * - Entity: Gestion, Aula
  */
 class GestionController extends Controller
 {

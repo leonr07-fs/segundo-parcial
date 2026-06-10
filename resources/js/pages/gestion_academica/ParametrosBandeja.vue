@@ -383,8 +383,11 @@
               <option value="" disabled>Seleccione gestion...</option>
               <option v-for="g in todasLasGestiones" :key="g.id" :value="g.id">{{ g.nombre }} - {{ g.estado }}</option>
             </select>
-            <button @click="generarAsignacionAutomatica" :disabled="!gestionAutomaticaId || cargandoAsignacion" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50">
+            <button v-if="!gestionTieneGruposConfirmados" @click="generarAsignacionAutomatica" :disabled="!gestionAutomaticaId || cargandoAsignacion" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50">
               Generar propuesta
+            </button>
+            <button v-else @click="asignarRezagados" :disabled="!gestionAutomaticaId || cargandoAsignacion" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50 shadow-sm border border-indigo-700">
+              Asignar Rezagados
             </button>
           </div>
         </div>
@@ -798,16 +801,49 @@ const obtenerNombreDia = (diaId) => {
 const obtenerHorarioMateria = (materiaGrupo) => {
   const horario = materiaGrupo.horarios?.[0];
   if (!horario) return 'Sin horario';
+  return `${obtenerNombreDia(horario.dia_semana)} ${horario.hora_inicio} - ${horario.hora_fin} (${horario.modalidad})`;
+};
 
-  return `${obtenerNombreDia(horario.dia_semana)} ${horario.hora_inicio} - ${horario.hora_fin}`;
+const gestionTieneGruposConfirmados = computed(() => {
+  if (!gestionAutomaticaId.value) return false;
+  return grupos.value.some(g => g.gestion?.id === gestionAutomaticaId.value);
+});
+
+const asignarRezagados = async () => {
+  if (!gestionAutomaticaId.value) return;
+  const confirmado = await toast.confirm({
+    title: 'Asignar Rezagados',
+    message: 'Se buscaran inscripciones sin grupo y se asignaran a los grupos existentes que tengan cupos disponibles.',
+    confirmText: 'Asignar',
+  });
+
+  if (!confirmado) return;
+
+  cargandoAsignacion.value = true;
+  try {
+    const { data } = await axios.post('/api/asignacion-automatica/rezagados', {
+      gestion_id: gestionAutomaticaId.value,
+    });
+
+    toast.success(
+      'Rezagados Asignados',
+      `${data.message}\nTotal rezagados: ${data.data.resultado.total_rezagados}\nEstudiantes asignados: ${data.data.resultado.estudiantes_asignados}\nSin cupo: ${data.data.resultado.sin_cupo}`,
+      { duration: 7000 }
+    );
+    await cargarGrupos();
+  } catch (e) {
+    toast.error('Error', e.response?.data?.message || 'Error al asignar rezagados');
+  } finally {
+    cargandoAsignacion.value = false;
+  }
 };
 
 onMounted(() => {
+  cargarGestiones();
   cargarTodasLasGestiones();
   cargarMaterias();
   cargarAulas();
-  cargarGrupos();
-  cargarGestiones();
   cargarDocentes();
+  cargarGrupos();
 });
 </script>

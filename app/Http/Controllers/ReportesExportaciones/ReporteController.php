@@ -14,6 +14,16 @@ use Illuminate\Validation\Rule;
  * Vinculación UML: Genera estadísticas y reportes oficiales dinámicos y estáticos en PDF y Excel.
  */
 
+/**
+ * CU18 - Consultar dashboard y generar reportes
+ *
+ * Participantes del CU18 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_Reportes
+ * - Control: ReporteController (Actual)
+ * - Control: ReporteService
+ * - Entity: Evaluacion
+ */
 class ReporteController extends Controller
 {
     public function __construct(private readonly ReporteService $reportes)

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\GestionAcademica;
+namespace App\Http\Controllers\PostulantesInscripcion;
 
 use App\Http\Controllers\Controller;
 
@@ -13,6 +13,13 @@ use Illuminate\Http\Request;
 /**
  * CU05 - Buscar, consultar y actualizar postulante
  * Permite buscar postulantes, consultar expedientes completos y actualizar datos administrativos.
+ *
+ * Participantes del CU05 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_AdminPostulante (Vue)
+ * - Control: AdminPostulanteController (Actual)
+ * - Control: AdminPostulanteService
+ * - Entity: Postulante, Inscripcion
  */
 class AdminPostulanteController extends Controller
 {

@@ -16,6 +16,14 @@ use Illuminate\Support\Facades\DB;
  * CU11 - Calcular promedio final y determinar estado
  * Procesa archivos CSV de notas y actualiza evaluaciones, resultados CUP y estado académico.
  */
+/**
+ * CU09 - Cargar/importar resultados académicos
+ *
+ * Participantes del CU09 (Diagrama de Secuencia):
+ * - Control: EvaluacionController
+ * - Control: ImportacionResultadosService (Actual)
+ * - Entity: Evaluacion
+ */
 class ImportacionResultadosService
 {
     /**
@@ -197,6 +205,20 @@ class ImportacionResultadosService
                     $errores[] = [
                         'fila' => $fila,
                         'mensaje' => $mensajeSecuencia,
+                    ];
+                    continue;
+                }
+
+                $columna = "examen_{$numeroExamen}";
+                
+                // [CU09] Restricción Anti-Sobreescritura: 
+                // Se previene que un CSV sobrescriba accidentalmente una nota que ya existe.
+                // Si el alumno ya tiene un valor cargado para este examen, se salta la fila
+                // obligando al administrador a usar la vista de "Consultar Notas" para modificaciones manuales.
+                if ($evaluacion->exists && $evaluacion->{$columna} !== null) {
+                    $errores[] = [
+                        'fila' => $fila,
+                        'mensaje' => "El Examen {$numeroExamen} ya tiene una nota registrada y no puede ser sobrescrito por CSV. Use la modificación manual si necesita corregirla.",
                     ];
                     continue;
                 }

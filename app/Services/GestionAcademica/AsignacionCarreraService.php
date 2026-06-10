@@ -13,6 +13,14 @@ use Illuminate\Support\Facades\Log;
  * CU12 - Asignar carrera por cupos (1ra opción y 2da opción)
  * Ejecuta la asignación de carrera a postulantes aprobados según cupos disponibles y prioridad de opción.
  */
+/**
+ * CU12 - Asignar carrera por cupos
+ *
+ * Participantes del CU12 (Diagrama de Secuencia):
+ * - Control: AsignacionCarreraController
+ * - Control: AsignacionCarreraService (Actual)
+ * - Entity: PostulanteCarrera
+ */
 class AsignacionCarreraService
 {
     /**

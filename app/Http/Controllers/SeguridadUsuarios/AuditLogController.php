@@ -14,6 +14,17 @@ use Illuminate\Support\Collection;
  * Vinculación UML: Permite consultar el registro de auditoría de operaciones críticas para asegurar la trazabilidad del proceso.
  */
 
+/**
+ * CU07 - Gestionar usuarios, roles y bitácora
+ * Permite gestionar la auditoría del sistema.
+ *
+ * Participantes del CU07 (Diagrama de Secuencia):
+ * - Actor: Administrador
+ * - Boundary: UI_UsuariosRoles (Vue)
+ * - Control: AuditLogController (Actual)
+ * - Control: AuditLogService
+ * - Entity: AuditLog
+ */
 class AuditLogController extends Controller
 {
     public function index(): JsonResponse
