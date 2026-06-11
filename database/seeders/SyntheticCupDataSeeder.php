@@ -12,8 +12,8 @@ use Illuminate\Support\Str;
 
 class SyntheticCupDataSeeder extends Seeder
 {
-    private const TOTAL_POSTULANTES = 3000;
-    private const TOTAL_DOCENTES = 60;
+    private const TOTAL_POSTULANTES = 900;
+    private const TOTAL_DOCENTES = 40;
     private const ANIO = 2026;
     private const GESTION = 'Semestre 1 2026';
     private const PASSWORD = 'CupFicct2026!';
