@@ -591,30 +591,67 @@ const imprimirBoletaHorario = async () => {
                 <div v-if="academico" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                     <h3 class="text-lg font-bold text-blue-950 mb-2">Material de Estudio Universitario</h3>
                     <p class="text-sm text-slate-500 mb-6">Descarga los PDF de los libros asociados a tus materias.</p>
-                    <div class="space-y-8" v-if="academico?.libros?.length">
-                        <div v-for="(librosMateria, materia) in librosPorMateria" :key="materia" class="border-l-4 border-blue-500 pl-4">
-                            <h4 class="text-base font-bold text-blue-900 mb-3">{{ materia }}</h4>
-                            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                <a v-for="libro in librosMateria" :key="libro.id" :href="libro.url" target="_blank"
-                                    class="group flex flex-col rounded-xl border border-gray-200 bg-gray-50 p-4 transition-all hover:border-blue-300 hover:bg-blue-50 hover:shadow-md">
-                                    <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-200">
-                                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                        </svg>
-                                    </div>
-                                    <h5 class="text-sm font-bold text-gray-900 group-hover:text-blue-800 line-clamp-2">{{ libro.titulo }}</h5>
-                                    <div class="mt-auto pt-3">
-                                        <span class="inline-flex items-center text-xs font-semibold text-blue-600">
-                                            Descargar PDF
-                                            <svg class="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                        </span>
-                                    </div>
-                                </a>
-                            </div>
+                    <div class="space-y-8">
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h4 class="text-base font-bold text-blue-900 mb-3">Matemáticas</h4>
+                            <ul class="space-y-2 text-sm text-gray-600">
+                                <li>
+                                    <a href="https://guao.org/sites/default/files/biblioteca/%C3%81lgebra%20de%20Baldor.pdf" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">
+                                        Álgebra de Baldor
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://izta5-pares.webcindario.com/libros/Matematica_preuniversitaria.pdf" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">
+                                        Manual de matemática preuniversitaria
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
-                    </div>
-                    <div v-else class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
-                        No hay material de estudio disponible para tu grupo en este momento.
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h4 class="text-base font-bold text-blue-900 mb-3">Computación</h4>
+                            <ul class="space-y-2 text-sm text-gray-600">
+                                <li>
+                                    <a href="https://api.pageplace.de/preview/DT0400.9786076225158_A43667089/preview-9786076225158_A43667089.pdf" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">
+                                        Matemáticas computacional
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://exactas.unca.edu.ar/ingres/2024/pdfs/2024-0402.pdf" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">
+                                        Introducción a la computación
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h4 class="text-base font-bold text-blue-900 mb-3">Inglés</h4>
+                            <ul class="space-y-2 text-sm text-gray-600">
+                                <li>
+                                    <a href="http://tebaevmartinez.com/documentos2/560810gt%20ingl%C3%89s%20b%C3%81sico%202022%20v2.pdf" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">
+                                        Cuadernillo de inglés
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://download.fimsschools.com/ebooks/Los%20Verbos%20En%20Ingles.pdf" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">
+                                        Inglés para hispanohablantes
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h4 class="text-base font-bold text-blue-900 mb-3">Física</h4>
+                            <ul class="space-y-2 text-sm text-gray-600">
+                                <li>
+                                    <a href="https://www.guao.org/sites/default/files/biblioteca/F%C3%ADsica%20b%C3%A1sica.pdf" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">
+                                        Física básica
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://api.pageplace.de/preview/DT0400.9788429196184_A41836331/preview-9788429196184_A41836331.pdf" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">
+                                        Física preuniversitaria
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
